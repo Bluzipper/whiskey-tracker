@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=5.0">
+<title>Barrel & Route — NM</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bourbon:#B5640A;--bourbon-l:#FFF0DC;--rye:#6B3FA0;--rye-l:#F0E9FF;
+  --of:#1A6B4A;--of-l:#E2F5EC;--on:#185FA5;--on-l:#E6F1FB;
+  --off:#8B4513;--off-l:#FFF4ED;--pro:#3B6D11;--pro-l:#EAF3DE;
+  --bg:#F7F5F2;--card:#fff;--border:rgba(0,0,0,0.09);
+  --text:#1A1A18;--muted:#666660;--r:12px;--hh:56px;--th:52px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100dvh}
+header{height:var(--hh);background:#1A1108;display:flex;align-items:center;gap:8px;padding:0 12px;flex-shrink:0;z-index:200}
+.logo-spacer{flex:1}
+.hbtn{font-size:12px;font-weight:500;padding:5px 10px;border-radius:99px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.hbtn svg{width:13px;height:13px}
+.toolbar{background:var(--card);border-bottom:1px solid var(--border);padding:9px 12px 7px;flex-shrink:0;z-index:150}
+.search-wrap{position:relative;margin-bottom:7px}
+.search-wrap input{width:100%;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;padding:0 12px 0 34px;color:var(--text);outline:none}
+.search-wrap input:focus{border-color:var(--bourbon)}
+.si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;pointer-events:none}
+.filters{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.pill{flex-shrink:0;font-size:12px;font-weight:500;padding:4px 10px;border-radius:99px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s}
+.pill.act{background:#1A1108;color:#E8A84A;border-color:#1A1108}
+.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0;z-index:150}
+.tab{flex:1;height:var(--th);display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.act{color:var(--bourbon);border-bottom-color:var(--bourbon)}
+.tab svg{width:15px;height:15px;flex-shrink:0}
+.content{flex:1;overflow:hidden;position:relative;min-height:0}
+#map-view,#list-view,#dash-view,#route-view{position:absolute;inset:0;transition:opacity .2s}
+#map-view.hidden,#list-view.hidden,#dash-view.hidden,#route-view.hidden{opacity:0;pointer-events:none}
+#list-view,#dash-view,#route-view{overflow-y:auto}
+#map{width:100%;height:100%;background:#e8edf2}
+.geo-bar-wrap{display:none;position:absolute;top:0;left:0;right:0;z-index:1000;background:#1A1108;padding:10px 14px}
+.geo-bar-wrap.show{display:block}
+#geo-text{font-size:12px;color:#E8A84A;margin-bottom:6px}
+.geo-track{background:rgba(255,255,255,.15);border-radius:4px;height:6px;overflow:hidden}
+#geo-bar{height:100%;background:#E8A84A;border-radius:4px;width:0%;transition:width .2s}
+#map-legend{position:absolute;bottom:28px;left:10px;z-index:900;background:rgba(255,255,255,.93);border-radius:10px;padding:8px 11px;font-size:11px;line-height:1;border:1px solid rgba(0,0,0,.1)}
+#map-legend .leg-title{font-weight:600;color:#1A1A18;margin-bottom:6px}
+.leg-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;color:#444;font-size:11px}
+.leg-row:last-child{margin-bottom:0}
+.pop-name{font-weight:600;font-size:14px;margin-bottom:2px;color:#1A1A18}
+.pop-type{font-size:11px;color:#666}
+.pop-btn{margin-top:8px;display:block;width:100%;padding:7px;background:#1A1108;color:#E8A84A;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.route-btn{margin-top:4px;display:block;width:100%;padding:6px;background:#185FA5;color:#E6F1FB;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer}
+#list-view{padding:10px}
+.lcount{font-size:12px;color:var(--muted);padding:2px 4px 8px;font-family:'DM Mono',monospace}
+.acard{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:12px 14px;margin-bottom:8px;cursor:pointer}
+.acard:active{transform:scale(.99)}
+.atop{display:flex;align-items:flex-start;gap:8px;margin-bottom:5px}
+.aname{font-size:14px;font-weight:600;line-height:1.3;flex:1}
+.tbadge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;flex-shrink:0;margin-top:2px}
+.t-on{background:var(--on-l);color:var(--on)}.t-off{background:var(--off-l);color:var(--off)}
+.aaddr{font-size:12px;color:var(--muted);margin-bottom:7px;line-height:1.4}
+.vrow{display:flex;gap:5px;flex-wrap:wrap}
+.vchip{font-size:11px;font-weight:500;padding:2px 7px;border-radius:6px}
+.vc-b{background:var(--bourbon-l);color:var(--bourbon)}.vc-r{background:var(--rye-l);color:var(--rye)}.vc-o{background:var(--of-l);color:var(--of)}.vc-n{background:#F0EFEC;color:var(--muted)}
+.cnrow{display:flex;align-items:center;gap:5px;margin-top:7px;padding-top:7px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.cnrow strong{color:var(--text)}
+.notes-preview{font-size:11px;color:var(--muted);font-style:italic;margin-top:5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.trend-wrap{display:flex;align-items:center;gap:5px;margin-top:6px}
+.trend-spark{display:flex;align-items:flex-end;gap:2px;height:18px}
+.trend-bar{width:7px;border-radius:2px 2px 0 0;min-height:2px}
+.trend-label{font-size:10px;font-weight:500;padding:2px 6px;border-radius:99px}
+.trend-up{background:#E6FBF0;color:#0C6B3C}.trend-down{background:#FCEAEA;color:#A32D2D}.trend-flat{background:#F0EFEC;color:var(--muted)}
+#dash-view{padding:12px}
+.dash-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px;padding:0 2px}
+.dash-title:first-child{margin-top:2px}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.kpi-card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:12px 14px}
+.kpi-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+.kpi-val{font-size:24px;font-weight:600;line-height:1;color:var(--text)}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.kpi-card.warn .kpi-val{color:#B5640A}.kpi-card.alert .kpi-val{color:#A32D2D}
+.prod-card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:14px;margin-bottom:8px}
+.prod-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.prod-row:last-child{margin-bottom:0}
+.prod-name{font-size:13px;font-weight:500;width:90px;flex-shrink:0}
+.prod-track-wrap{flex:1;min-width:0}
+.prod-sub-label{font-size:10px;color:var(--muted);margin-bottom:3px}
+.prod-track{height:9px;background:var(--bg);border-radius:5px;overflow:hidden;margin-bottom:2px}
+.prod-fill{height:100%;border-radius:5px}
+.prod-num{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);width:75px;text-align:right;flex-shrink:0}
+.region-card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:12px 14px;margin-bottom:8px}
+.region-name{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.region-count{font-size:11px;font-weight:400;color:var(--muted)}
+.region-bars{display:flex;flex-direction:column;gap:7px}
+.region-bar-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.region-bar-label{width:70px;flex-shrink:0;color:var(--muted)}
+.region-bar-track{flex:1;height:7px;background:var(--bg);border-radius:3px;overflow:hidden}
+.region-bar-fill{height:100%;border-radius:3px}
+.region-bar-num{font-family:'DM Mono',monospace;width:45px;text-align:right;color:var(--muted);flex-shrink:0}
+.alert-list{margin-bottom:8px}
+.alert-item{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.alert-item.overdue{border-left:3px solid #A32D2D}.alert-item.no-vol{border-left:3px solid #B5640A}
+.alert-name{font-size:13px;font-weight:500;flex:1}
+.alert-tag{font-size:11px;padding:2px 8px;border-radius:99px;flex-shrink:0}
+.tag-overdue{background:#FCEAEA;color:#A32D2D}.tag-novol{background:var(--bourbon-l);color:var(--bourbon)}
+.q90-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+.q90-cell{text-align:center;padding:8px 6px;border-radius:9px;border:1px solid var(--border)}
+.q90-num{font-size:18px;font-weight:600;line-height:1}
+.q90-name{font-size:10px;color:var(--muted);margin-top:3px}
+.q90-delta{font-size:10px;font-weight:500;margin-top:3px}
+.delta-up{color:#0C6B3C}.delta-down{color:#A32D2D}.delta-flat{color:var(--muted)}
+#route-view{padding:12px}
+.route-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.route-header h2{font-size:16px;font-weight:600}
+.region-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+.region-sel-btn{padding:10px 8px;border-radius:9px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;text-align:center;color:var(--muted)}
+.region-sel-btn.sel{background:#1A1108;color:#E8A84A;border-color:#1A1108}
+.route-actions{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.route-action-btn{font-size:13px;font-weight:500;padding:8px 14px;border-radius:99px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;white-space:nowrap}
+.route-action-btn.primary{background:#1A1108;color:#E8A84A;border-color:#1A1108}
+.route-action-btn.danger{background:#FCEAEA;color:#A32D2D;border-color:#FCBCBC}
+.route-stop{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:11px 14px;margin-bottom:7px;display:flex;align-items:flex-start;gap:10px}
+.stop-num{width:24px;height:24px;border-radius:50%;background:#1A1108;color:#E8A84A;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.stop-body{flex:1;min-width:0}
+.stop-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.stop-addr{font-size:11px;color:var(--muted);line-height:1.4}
+.stop-dist{font-size:11px;color:var(--on);margin-top:3px;font-family:'DM Mono',monospace}
+.stop-remove{font-size:18px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0}
+.route-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px}
+.gmaps-btn{display:block;width:100%;padding:13px;background:#185FA5;color:#E6F1FB;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;border:none;border-radius:var(--r);cursor:pointer;text-align:center;margin-bottom:8px}
+.route-map-wrap{height:200px;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);margin-bottom:12px}
+#route-map{width:100%;height:100%;background:#e8edf2}
+.route-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px}
+.route-stat{background:var(--card);border-radius:9px;border:1px solid var(--border);padding:9px 10px;text-align:center}
+.route-stat-val{font-size:18px;font-weight:600}
+.route-stat-label{font-size:10px;color:var(--muted);margin-top:2px}
+.manual-search-wrap{position:relative;margin-bottom:8px}
+.manual-search-wrap input{width:100%;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;padding:0 12px 0 34px;color:var(--text);outline:none}
+.acct-suggestions{background:var(--card);border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-bottom:10px;display:none}
+.suggestion-item{padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)}
+.suggestion-item:last-child{border-bottom:none}
+#pov{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:none;align-items:flex-end}
+#pov.open{display:flex}
+#panel{background:var(--card);width:100%;max-height:92dvh;border-radius:20px 20px 0 0;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom,16px)+8px)}
+.phandle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 12px}
+.phdr{padding:0 16px 12px;border-bottom:1px solid var(--border)}
+.pname{font-size:17px;font-weight:600;line-height:1.3;margin-bottom:3px}
+.paddr{font-size:13px;color:var(--muted);line-height:1.4}
+.pbadges{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+.badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px}
+.bd-on{background:var(--on-l);color:var(--on)}.bd-off{background:var(--off-l);color:var(--off)}.bd-cur{background:#E6FBF0;color:#0C6B3C}.bd-pro{background:var(--pro-l);color:var(--pro)}
+.psec{padding:13px 16px;border-bottom:1px solid var(--border)}
+.psec:last-child{border-bottom:none}
+.stitle{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px}
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.ilabel{font-size:11px;color:var(--muted);margin-bottom:2px}
+.ival{font-size:13px;font-weight:500;word-break:break-word}
+.ival a{color:var(--on);text-decoration:none}
+.ival.empty{color:#BBB;font-style:italic;font-weight:400}
+.vbars{display:flex;flex-direction:column;gap:9px}
+.vbtop{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}
+.vbname{font-weight:500}
+.vbnum{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)}
+.vtrack{height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.vfill{height:100%;border-radius:4px}
+.q90-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+.q90-cell{text-align:center;padding:8px 6px;border-radius:9px;border:1px solid var(--border)}
+.q90-num{font-size:18px;font-weight:600;line-height:1}
+.q90-name{font-size:10px;color:var(--muted);margin-top:3px}
+.q90-delta{font-size:10px;font-weight:500;margin-top:3px}
+.notes-area{font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.notes-empty{font-size:13px;color:#BBB;font-style:italic}
+.panel-actions{display:flex;gap:8px;padding:12px 16px}
+.edit-btn{flex:1;padding:12px;background:#1A1108;color:#E8A84A;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;border:none;border-radius:var(--r);cursor:pointer}
+.add-route-btn{flex:1;padding:12px;background:#185FA5;color:#E6F1FB;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;border:none;border-radius:var(--r);cursor:pointer}
+#eov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:none;align-items:flex-end}
+#eov.open{display:flex}
+#emodal{background:var(--card);width:100%;max-height:94dvh;border-radius:20px 20px 0 0;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom,16px)+16px)}
+.mhdr{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:10}
+.mtitle{font-size:16px;font-weight:600}
+.mclose{font-size:24px;color:var(--muted);background:none;border:none;cursor:pointer;line-height:1;padding:2px 6px}
+.fsec{padding:13px 16px;border-bottom:1px solid var(--border)}
+.fsec:last-of-type{border-bottom:none}
+.flabel{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px}
+.field{margin-bottom:11px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+.field input,.field select,.field textarea{width:100%;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;color:var(--text);outline:none;line-height:1.5}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--bourbon)}
+.field textarea{resize:vertical;min-height:90px}
+.field input[type=number]{-moz-appearance:textfield}
+.field input[type=number]::-webkit-inner-spin-button{display:none}
+.vgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.srow{display:flex;gap:7px}
+.sopt{flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);text-align:center;font-size:13px;font-weight:500;cursor:pointer;background:var(--bg);color:var(--muted)}
+.sopt.s-cur{background:#E6FBF0;color:#0C6B3C;border-color:#0C6B3C}
+.sopt.s-pro{background:var(--pro-l);color:var(--pro);border-color:var(--pro)}
+.save-btn{display:block;width:calc(100% - 32px);margin:13px 16px 0;padding:13px;background:#1A1108;color:#E8A84A;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;border:none;border-radius:var(--r);cursor:pointer}
+#iov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:700;display:none;align-items:flex-end}
+#iov.open{display:flex}
+#imodal{background:var(--card);width:100%;max-height:80dvh;border-radius:20px 20px 0 0;overflow-y:auto;padding:0 0 calc(env(safe-area-inset-bottom,16px)+16px)}
+.import-body{padding:16px}
+.import-info{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px}
+.import-info strong{color:var(--text)}
+.format-box{background:var(--bg);border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.8;overflow-x:auto;white-space:nowrap}
+.filedrop{border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;margin-bottom:12px}
+.filedrop p{font-size:14px;color:var(--muted);margin-top:6px}
+.filedrop strong{font-size:15px;color:var(--text)}
+#file-input{display:none}
+.import-result{font-size:13px;padding:10px 12px;border-radius:8px;display:none;margin-bottom:10px}
+.import-result.ok{background:#E6FBF0;color:#0C6B3C}
+.import-result.err{background:#FCEAEA;color:#A32D2D}
+#fab{position:fixed;bottom:calc(env(safe-area-inset-bottom,16px)+16px);right:16px;z-index:400;width:52px;height:52px;border-radius:50%;background:#1A1108;border:none;color:#E8A84A;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+@media(min-width:600px){
+  #panel,#emodal,#imodal{max-width:480px;margin:0 auto;border-radius:20px}
+  #pov,#eov,#iov{align-items:center}
+}
+</style>
+</head>
+<body>
+<header>
+  <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAF9B9ADASIAAhEBAxEB/8QAHQABAAIDAQEBAQAAAAAAAAAAAAgJBQYHBAMCAf/EAF8QAAEDAwIBBAkMDQoEBQMFAQABAgMEBQYHERIIITFBCRMYIlFWYXTSFBc1NzhXcXKVsrPTFTI2YnN1gZGSk5SxtBYjMzRCUnaCocMkQ1NVY4OiwcIlo+EnRGSE0fD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AhkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABl7Fi+TX5/BY8du90dvttR0Uky7+DvUUDEA3pmjurD28Sab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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/2Q==" alt="Taylor Garrett" style="height:28px;max-width:180px;object-fit:contain;flex-shrink:0;">
+  <div class="logo-spacer"></div>
+  <button class="hbtn" onclick="openImport()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import</button>
+  <button class="hbtn" onclick="exportCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+</header>
+<div class="toolbar">
+  <div class="search-wrap"><span class="si">&#x2315;</span><input type="text" id="search" placeholder="Search accounts, cities, reps&hellip;" oninput="applyFilters()"></div>
+  <div class="filters">
+    <div class="pill act" onclick="setFilter(this,'all')">All</div>
+    <div class="pill" onclick="setFilter(this,'on')">On-Premise</div>
+    <div class="pill" onclick="setFilter(this,'off')">Off-Premise</div>
+    <div class="pill" onclick="setFilter(this,'pro')">Prospects</div>
+    <div class="pill" onclick="setFilter(this,'bourbon')">Bourbon</div>
+    <div class="pill" onclick="setFilter(this,'rye')">Rye</div>
+    <div class="pill" onclick="setFilter(this,'of')">Old Fashioned</div>
+  </div>
+</div>
+<div class="tabs">
+  <div class="tab act" id="tab-map" onclick="switchTab('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 9m0 8V9m0 0L9 7"/></svg>Map</div>
+  <div class="tab" id="tab-list" onclick="switchTab('list')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>List</div>
+  <div class="tab" id="tab-route" onclick="switchTab('route')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8l4 4-4 4M8 12h8"/></svg>Route</div>
+  <div class="tab" id="tab-dash" onclick="switchTab('dash')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</div>
+</div>
+<div class="content">
+  <div id="map-view">
+    <div class="geo-bar-wrap" id="geo-progress"><div id="geo-text">Geocoding addresses&hellip;</div><div class="geo-track"><div id="geo-bar"></div></div></div>
+    <div id="map"></div>
+    <div id="map-error" style="display:none;position:absolute;inset:0;background:rgba(26,17,8,0.92);z-index:2000;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;gap:14px">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#E8A84A" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div style="color:#E8A84A;font-size:15px;font-weight:600">Map not loading</div>
+      <div id="map-error-msg" style="color:rgba(232,168,74,.7);font-size:13px;line-height:1.5;max-width:300px"></div>
+      <div style="color:rgba(232,168,74,.6);font-size:12px;line-height:1.6;max-width:320px">
+        To fix: go to <strong style="color:#E8A84A">Google Cloud Console</strong> &rarr; APIs &amp; Services &rarr; Credentials &rarr; your Maps JS key &rarr; Website restrictions &rarr; add <strong style="color:#E8A84A">YOUR-USERNAME.github.io/*</strong>
+      </div>
+      <button onclick="location.reload()" style="margin-top:8px;padding:10px 20px;background:#E8A84A;color:#1A1108;border:none;border-radius:8px;font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;cursor:pointer">Retry</button>
+    </div>
+    <div id="map-legend">
+      <div class="leg-title">Legend</div>
+      <div class="leg-row"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#185FA5"/></svg>On-premise</div>
+      <div class="leg-row"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#B5640A"/></svg>Off-premise</div>
+      <div style="font-weight:600;color:#888;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin:5px 0 4px">Prospects</div>
+      <div class="leg-row"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#D4EDDA" stroke="#1A6B4A" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#1A6B4A"/></svg>&le;30 days</div>
+      <div class="leg-row"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#FFF3CD" stroke="#B8860B" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#B8860B"/></svg>31&ndash;60 days</div>
+      <div class="leg-row"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#FCEAEA" stroke="#A32D2D" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#A32D2D"/></svg>61+ days</div>
+      <div class="leg-row"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#E0E0DC" stroke="#9A9A94" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#9A9A94"/></svg>No date</div>
+    </div>
+  </div>
+  <div id="list-view" class="hidden"><div class="lcount" id="lcount"></div><div id="litems"></div></div>
+  <div id="route-view" class="hidden">
+    <div style="padding:2px 2px 4px">
+      <div class="route-header"><h2>Route Planner</h2><span style="font-size:12px;color:var(--muted)" id="route-count">0 stops</span></div>
+      <div class="route-map-wrap"><div id="route-map"></div></div>
+      <div class="route-stats">
+        <div class="route-stat"><div class="route-stat-val" id="rs-stops">0</div><div class="route-stat-label">Stops</div></div>
+        <div class="route-stat"><div class="route-stat-val" id="rs-dist">&mdash;</div><div class="route-stat-label">Est. miles</div></div>
+        <div class="route-stat"><div class="route-stat-val" id="rs-time">&mdash;</div><div class="route-stat-label">Drive time</div></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:500">Add by region</p>
+      <div class="region-select-grid" id="region-btns"></div>
+      <p style="font-size:12px;color:var(--muted);margin:10px 0 6px;font-weight:500">Add manually</p>
+      <div class="manual-search-wrap"><span class="si">&#x2315;</span><input type="text" id="route-search" placeholder="Search accounts to add&hellip;" oninput="routeSearch()" autocomplete="off"></div>
+      <div class="acct-suggestions" id="suggestions"></div>
+      <div class="route-actions">
+        <button class="route-action-btn primary" onclick="optimizeRoute()">&#x2609; Optimize order</button>
+        <button class="route-action-btn" onclick="openInGoogleMaps()">&#x1F5FA; Open in Maps</button>
+        <button class="route-action-btn danger" onclick="clearRoute()">Clear</button>
+      </div>
+      <div id="route-stops"></div>
+    </div>
+  </div>
+  <div id="dash-view" class="hidden"><div id="dash-content"></div></div>
+</div>
+<button id="fab" onclick="openAdd()">+</button>
+<!-- Detail Panel -->
+<div id="pov" onclick="if(event.target===this)closePanel()">
+  <div id="panel">
+    <div class="phandle"></div>
+    <div class="phdr"><div class="pname" id="p-name"></div><div class="paddr" id="p-addr"></div><div class="pbadges" id="p-badges"></div></div>
+    <div class="psec"><div class="stitle">Contact</div>
+      <div class="igrid">
+        <div><div class="ilabel">Point of contact</div><div class="ival" id="p-contact"></div></div>
+        <div><div class="ilabel">Phone</div><div class="ival" id="p-phone"></div></div>
+        <div><div class="ilabel">Email</div><div class="ival" id="p-email"></div></div>
+        <div><div class="ilabel">Distributor rep</div><div class="ival" id="p-rep"></div></div>
+        <div><div class="ilabel">Last contact</div><div class="ival" id="p-last"></div></div>
+        <div><div class="ilabel">Status</div><div class="ival" id="p-status"></div></div>
+      </div>
+    </div>
+    <div class="psec"><div class="stitle">Annual Volume (cases/yr)</div><div class="vbars" id="p-vols"></div></div>
+    <div class="psec"><div class="stitle">Last 90 Days</div><div id="p-q90"></div></div>
+    <div class="psec"><div class="stitle">Notes</div><div id="p-notes-content"></div></div>
+    <div class="panel-actions">
+      <button class="edit-btn" onclick="openEdit(currentId)">Edit account</button>
+      <button class="add-route-btn" onclick="addToRouteFromPanel()">+ Add to route</button>
+    </div>
+  </div>
+</div>
+<!-- Edit Modal -->
+<div id="eov" onclick="if(event.target===this)closeEdit()">
+  <div id="emodal">
+    <div class="mhdr"><div class="mtitle" id="mtitle">Edit account</div><button class="mclose" onclick="closeEdit()">&times;</button></div>
+    <div class="fsec"><div class="flabel">Account info</div>
+      <div class="field"><label>Account name</label><input id="f-name" type="text"></div>
+      <div class="field"><label>Address</label><input id="f-addr" type="text"></div>
+      <div class="field"><label>Type</label><select id="f-type"><option value="ON">On-Premise (bar/restaurant)</option><option value="OFF">Off-Premise (retail/liquor store)</option></select></div>
+      <div class="field"><label>Status</label><div class="srow"><div class="sopt s-cur" id="opt-cur" onclick="selStatus('current')">Current</div><div class="sopt" id="opt-pro" onclick="selStatus('prospect')">Prospect</div></div></div>
+    </div>
+    <div class="fsec"><div class="flabel">Contact details</div>
+      <div class="field"><label>Point of contact</label><input id="f-contact" type="text"></div>
+      <div class="field"><label>Phone</label><input id="f-phone" type="tel"></div>
+      <div class="field"><label>Email</label><input id="f-email" type="email"></div>
+      <div class="field"><label>Distributor rep (RNDC)</label><input id="f-rep" type="text"></div>
+      <div class="field"><label>Last contact date</label><input id="f-last" type="date"></div>
+    </div>
+    <div class="fsec"><div class="flabel">Annual volume (cases/yr)</div>
+      <div class="vgrid">
+        <div class="field"><label>Bourbon</label><input id="f-bourbon" type="number" min="0"></div>
+        <div class="field"><label>Rye</label><input id="f-rye" type="number" min="0"></div>
+        <div class="field"><label>Old Fashioned</label><input id="f-of" type="number" min="0"></div>
+      </div>
+    </div>
+    <div class="fsec"><div class="flabel">Last 90-day volume</div>
+      <div class="vgrid">
+        <div class="field"><label>Bourbon</label><input id="f-q90b" type="number" min="0"></div>
+        <div class="field"><label>Rye</label><input id="f-q90r" type="number" min="0"></div>
+        <div class="field"><label>Old Fashioned</label><input id="f-q90o" type="number" min="0"></div>
+      </div>
+    </div>
+    <div class="fsec"><div class="flabel">Notes</div>
+      <div class="field"><label>Internal notes</label><textarea id="f-notes" placeholder="Add notes, follow-ups, preferences&hellip;"></textarea></div>
+    </div>
+    <button class="save-btn" onclick="saveEdit()">Save changes</button>
+  </div>
+</div>
+<!-- Import Modal -->
+<div id="iov" onclick="if(event.target===this)closeImport()">
+  <div id="imodal">
+    <div class="mhdr"><div class="mtitle">Import volume update</div><button class="mclose" onclick="closeImport()">&times;</button></div>
+    <div class="import-body">
+      <p class="import-info">Match by <strong>Account Name</strong>. Use <strong>Q90_</strong> prefix for 90-day columns.</p>
+      <div class="format-box">Account Name,Bourbon,Rye,Old Fashioned,Q90_Bourbon,Q90_Rye,Q90_Old Fashioned<br>JUBILATION,120,45,30,38,12,9</div>
+      <div class="filedrop" id="filedrop" onclick="document.getElementById('file-input').click()">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5640A" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <strong>Tap to choose CSV file</strong><p>or drag and drop here</p>
+      </div>
+      <input type="file" id="file-input" accept=".csv,.txt" onchange="handleImport(event)">
+      <div class="import-result" id="import-result"></div>
+      <button class="save-btn" style="margin:0" onclick="closeImport()">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──
+const RAW=[{"id":1,"name":"BIRD OF PARADISE-OFF PREM","type":"OFF","address":"5409 GIBSON S.E., ALBUQUERQUE, NM 87108","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0914,"lng":-106.6836,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":2,"name":"DEL NORTE LOUNGE","type":"OFF","address":"1574 PASEO DE NORTE, TAOS, NM 87557","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.396,"lng":-105.5925,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":3,"name":"DISTIL-OFF PREMISE","type":"OFF","address":"5900 E MAIN ST, FARMINGTON, NM 87402","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7399,"lng":-108.1963,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":4,"name":"EL PRADO LIQUOR STORE   LLC","type":"OFF","address":"2 MI N OF TAOS HWY 3, PO BOX 1018, EL PRADO, NM 87529","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.4268,"lng":-105.602,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":5,"name":"HENRY S","type":"OFF","address":"N HWY 84 PAST THE Y, TIERRA AMARILLA, NM 87575","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7006,"lng":-106.5804,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":6,"name":"KELLY S #15-BERNALILLO","type":"OFF","address":"500 W US HWY 550, BERNALILLO, NM 87004","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2862,"lng":-106.5524,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":7,"name":"SUSAN S FINE WINE & SPRTS-OFF","type":"OFF","address":"632 AGUA FRIA ST SUITE 105, SANTA FE, NM 87501","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.6633,"lng":-105.9589,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":8,"name":"WOODEN NICKEL-OFF PREMISE","type":"OFF","address":"900 WEST BROADWAY, BLOOMFIELD, NM 87413","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7203,"lng":-107.9731,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":9,"name":"LOWE S #55","type":"OFF","address":"675 10TH ST, ALAMOGORDO, NM 88310","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.8855,"lng":-105.9541,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":10,"name":"LOWE S #91","type":"OFF","address":"2400 7TH ST, LAS VEGAS, NM 87701","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.6094,"lng":-105.2573,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":11,"name":"BLACKIES-OFF PREMISE","type":"OFF","address":"PO BOX 3569, MORIARTY, NM 87035","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0054,"lng":-106.0355,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":12,"name":"BULLOCKS SHUR SAV","type":"OFF","address":"630 BROADWAY, T OR C, NM 87901","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.1282,"lng":-107.2776,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":13,"name":"DINO MART #170","type":"OFF","address":"3101 LA PLATA HIGHWAY, FARMINGTON, NM 87401","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.751,"lng":-108.2201,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":14,"name":"DINO S HIDE AWAY-OFF PREMISE","type":"OFF","address":"405 ROAD 390, FARMINGTON, NM 87401","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7077,"lng":-108.2369,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":15,"name":"EL REY DISCOUNT LIQUOR","type":"OFF","address":"811 N RIVERSIDE DR SUITE D, ESPANOLA, NM 87532","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.0102,"lng":-106.0746,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":16,"name":"FARMER S COUNTRY MARKET","type":"OFF","address":"800 WEST HOBBS, ROSWELL, NM 88202","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.4097,"lng":-104.5069,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":17,"name":"FARMERS COUNTRY MARKET N","type":"OFF","address":"2800 NORTH MAIN STREET, ROSWELL, NM 88201","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.3961,"lng":-104.4899,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":18,"name":"FENN S COUNTRY MARKET","type":"OFF","address":"2001 W MAIN, ARTESIA, NM 88210","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.8365,"lng":-104.3994,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":19,"name":"FOUR WINDS TRAVEL CENTER","type":"OFF","address":"2401 12TH ST NW, ALBUQUERQUE, NM 87104","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.1009,"lng":-106.6421,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":20,"name":"HILLTOP BOTTLE SHOP","type":"OFF","address":"124 W. 22ND ST., CLOVIS, NM 88101","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":34.4229,"lng":-103.1998,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":21,"name":"JAKE S PACKAGE LIQUOR","type":"OFF","address":"68 CITIES OF GOLD RD, SANTA FE, NM 87506","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.6972,"lng":-105.9696,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":22,"name":"JUBILATION","type":"OFF","address":"3512 LOMAS NE, ALBUQUERQUE, NM 87106","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0708,"lng":-106.6651,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":23,"name":"KELLY LIQUORS #17-LAS CRUCES","type":"OFF","address":"3850 E. LOHMAN AVE.  STE D, LAS CRUCES, NM 88011","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.2989,"lng":-106.7824,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":24,"name":"KELLY S #2-MTN RUN","type":"OFF","address":"5850 EUBANK N.E., ALBUQUERQUE, NM 87111","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0645,"lng":-106.6659,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":25,"name":"LA LUZ MARKET","type":"OFF","address":"27 ALAMO, LA LUZ, NM 88337","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.9819,"lng":-105.9463,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":26,"name":"LA TIENDA THRIFTWAY","type":"OFF","address":"1301 S CANAL, CARLSBAD, NM 88220","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.4142,"lng":-104.2491,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":27,"name":"LATITUDES","type":"OFF","address":"2401 NM HWY. 528 SE, RIO RANCHO, NM 87124","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2211,"lng":-106.6324,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":28,"name":"LIQUOR BARN-OFF PREMISE","type":"OFF","address":"2885 CERRILLOS RD, SANTA FE, NM 87505","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.6944,"lng":-105.9302,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":29,"name":"OWL LIQUOR-OFF PREMISE","type":"OFF","address":"913 HICKOX, SANTA FE, NM 87505","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.6706,"lng":-105.9218,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":30,"name":"PARADISE LIQ-98TH ST-OFF PREM","type":"OFF","address":"311 98TH STREET NW, ALBUQUERQUE, NM 87121","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0676,"lng":-106.6588,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":31,"name":"PARADISE LIQUORS-OFF PREM","type":"OFF","address":"6531 PARADISE BLVD NW, ALBUQUERQUE, NM 87114","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.1089,"lng":-106.6406,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":32,"name":"QUALITY LIQUOR STORE-OFF","type":"OFF","address":"1400 S. MAIN, ROSWELL, NM 88203","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.3971,"lng":-104.5101,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":33,"name":"RODEO PLAZA LIQUORS*","type":"OFF","address":"2801 RODEO ROAD, SANTA FE, NM 87507","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.7041,"lng":-105.9185,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":34,"name":"STONE FACE PACKAGE STORE","type":"OFF","address":"8201 SAN PEDRO NE, ALBUQUERQUE, NM 87113","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0709,"lng":-106.6832,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":35,"name":"TOUCAN MARKET","type":"OFF","address":"1701-1 E UNIVERSITY, LAS CRUCES, NM 88001","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.3107,"lng":-106.78,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":36,"name":"SPEEDWAY #9378 - #47144","type":"OFF","address":"507 E BROADWAY, FARMINGTON, NM 87401","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7136,"lng":-108.1777,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":37,"name":"SPEEDWAY #9551 - #44856","type":"OFF","address":"204 S BLOOMFIELD, BLOOMFIELD, NM 87413","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7316,"lng":-107.9892,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":38,"name":"TOTAL WINE 1303","type":"OFF","address":"3529 ZAFARANO DR, SANTA FE, NM 87507","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.6948,"lng":-105.9451,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":39,"name":"TOTAL WINE 1304","type":"OFF","address":"3529 ZAFARANO DR, SANTA FE, NM 87507","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.7077,"lng":-105.9407,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":40,"name":"TOTAL WINE 1305","type":"OFF","address":"3529 ZAFARANO DR, SANTA FE, NM 87507","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.6752,"lng":-105.9555,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":41,"name":"ALBERTSONS #680","type":"OFF","address":"2402 N. GRIMES, HOBBS, NM 88240","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.7057,"lng":-103.1526,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":42,"name":"ALBERTSONS #681","type":"OFF","address":"1300 TENTH STREET, ALAMOGORDO, NM 88310","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.9037,"lng":-105.9325,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":43,"name":"ALBERTSONS #682","type":"OFF","address":"721 MECHAM DR, RUIDOSO, NM 88345","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.3326,"lng":-105.6768,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":44,"name":"ALBERTSONS #690","type":"OFF","address":"1110 SOUTH MAIN STREET, ROSWELL, NM 88203","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.4192,"lng":-104.5223,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":45,"name":"ALBERTSONS #904","type":"OFF","address":"4950 MONTGOMERY NE, ALBUQUERQUE, NM 87109","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0639,"lng":-106.6821,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":46,"name":"ALBERTSONS #905","type":"OFF","address":"2910 JUAN TABO NE, ALBUQUERQUE, NM 87112","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0649,"lng":-106.6415,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":47,"name":"ALBERTSONS #915","type":"OFF","address":"6200 COORS NW, ALBUQUERQUE, NM 87120","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.099,"lng":-106.6558,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":48,"name":"ALBERTSONS #923","type":"OFF","address":"7800 ENCHANTED HILLS, RIO RANCHO, NM 87124","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.211,"lng":-106.6713,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":49,"name":"ALBERTSONS #928","type":"OFF","address":"11825 LOMAS NE, ALBUQUERQUE, NM 87112","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.1092,"lng":-106.6484,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":50,"name":"ALBERTSONS #938","type":"OFF","address":"7101 WYOMING NE, ALBUQUERQUE, NM 87109","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.108,"lng":-106.6251,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":51,"name":"5 STAR BURGERS-ABQ","type":"ON","address":"5901-P2 WYOMING BLVD NE, ALBUQUERQUE, NM 87109","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.06,"lng":-106.6349,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":52,"name":"550 BREWING CO.  LLC-OFFSITE","type":"ON","address":"119 E. CHUSKA ST., AZTEC, NM 87410","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.8311,"lng":-107.9894,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":53,"name":"PICACHO PEAK BREWING CO. LLC","type":"ON","address":"3900 W PICACHO, LAS CRUCES, NM 88007","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.3082,"lng":-106.7538,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":54,"name":"PONDEROSA BREWING CO","type":"ON","address":"1761 BELLAMAH AVE NW, ALBUQUERQUE, NM 87104","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.065,"lng":-106.655,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":55,"name":"THREE RIVERS EATERY & BREW   W","type":"ON","address":"101 E MAIN, FARMINGTON, NM 87401","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7258,"lng":-108.1769,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":56,"name":"TURTLE MOUNTAIN BREWERY    W","type":"ON","address":"905 36TH PLACE, RIO RANCHO, NM 87124","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2516,"lng":-106.6796,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":57,"name":"WELLHEAD REST & BREW PUB","type":"ON","address":"332334 W. MAIN ST, ARTESIA, NM 88210","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.8426,"lng":-104.4255,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":58,"name":"ROUTE 66 LOUNGE","type":"ON","address":"2200 SUNPORT BLVD SE, ALBUQUERQUE, NM 87106","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.105,"lng":-106.6245,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":59,"name":"WATCH! SPORTS BAR","type":"ON","address":"2200 SUNPORT-GATE F16, ALBUQUERQUE, NM 87106","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0743,"lng":-106.6407,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":60,"name":"HOTEL CHACO","type":"ON","address":"800 RIO GRANDE BLVD. NW, ALBUQUERQUE, NM 87104","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0898,"lng":-106.6747,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":61,"name":"HILTON GARDEN INN","type":"ON","address":"5320 SAN ANTONIO NE, ALBUQUERQUE, NM 87109","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0975,"lng":-106.6476,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":62,"name":"SANTA ANA TAMAYA HYATT","type":"ON","address":"1300 TAMAYA TRAIL, SANTA ANA PUEBLO, NM 87004","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.3167,"lng":-106.5462,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":63,"name":"12TH STREET TAVERN","type":"ON","address":"2400 12TH STREET NW, ALBUQUERQUE, NM 87104","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0594,"lng":-106.6627,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":64,"name":"312 MOBILE BAR & LIQUOR","type":"ON","address":"8414 JEFFERSON ST NE STE B, ALBUQUERQUE, NM 87113","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0604,"lng":-106.6204,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":65,"name":"4940/FANCIES BAKERY MKT EATERY","type":"ON","address":"4940 CORRALES RD ST 400 & 450, CORRALES, NM 87048","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2559,"lng":-106.5845,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":66,"name":"87","type":"ON","address":"803 SOUTH FIRST ST, CLAYTON, NM 88415","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.4438,"lng":-103.2144,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":67,"name":"ABQ AX","type":"ON","address":"5505 OSUNA RD SUITE 1, ALBUQUERQUE, NM 87109","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.1033,"lng":-106.6191,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":68,"name":"ADOBE ROSE RESTAURANT    W","type":"ON","address":"1614 N 13TH ST, ARTESIA, NM 88210","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.8219,"lng":-104.404,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":69,"name":"ALLEY CANTINA       L","type":"ON","address":"121 TERESINA LN, TAOS, NM 87571","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.3857,"lng":-105.5549,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":70,"name":"ARROYO VINO","type":"ON","address":"218 CAMINO LA TIERRA, SANTA FE, NM 87506","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.7003,"lng":-105.9638,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":71,"name":"ARTESIA COUNTRY CLUB","type":"ON","address":"2701 W RICHEY STREET, ARTESIA, NM 88210","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.8414,"lng":-104.3995,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":72,"name":"AZTECA MEXICAN GRILL     W","type":"ON","address":"122 DONA LUZ ST, TAOS, NM 87571","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.3955,"lng":-105.547,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":73,"name":"BABE S SPORTS BAR","type":"ON","address":"5024 N LOVINGTON HWY, HOBBS, NM 88240","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.6988,"lng":-103.1562,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":74,"name":"BEEF AND LEAF CAFE","type":"ON","address":"3801 ARKANSAS AVE STE G, LOS ALAMOS, NM 87544","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.882,"lng":-106.2801,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":75,"name":"BIG FOOT RESTAURANT","type":"ON","address":"212 WARM SPRINGS BLVD, ELEPHANT BUTTE, NM 87935","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.1391,"lng":-107.223,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":76,"name":"BLACK COCK BREWERY","type":"ON","address":"1719 SE MAIN ST., ROSWELL, NM 88203","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.4191,"lng":-104.5125,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":77,"name":"BLACK GOLD DISTILLING","type":"ON","address":"1010 W JOE HARVEY BLVD, HOBBS, NM 88240","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.6995,"lng":-103.1348,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":78,"name":"BULL O THE WOODS*","type":"ON","address":"401 E MAIN, RED RIVER, NM 87558","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.6889,"lng":-105.4276,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":79,"name":"BURGER STAND AT BURRO ALLEY","type":"ON","address":"207 W SAN FRANCISCO, SANTA FE, NM 87501","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.6789,"lng":-105.9316,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":80,"name":"CALS SHADE WESTERN-ON PREM","type":"ON","address":"1611 S CANAL ST, CARLSBAD, NM 88220","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.4072,"lng":-104.2484,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":81,"name":"CHILITOS-S VALLEY DR","type":"ON","address":"2405 S VALLEY DR, LAS CRUCES, NM 88005","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.2984,"lng":-106.7545,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":82,"name":"CHURCH STREET CAFE       W","type":"ON","address":"2111 CHURCH ST., ALBUQUERQUE, NM 87104","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0708,"lng":-106.622,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":83,"name":"CLANCY S PUB","type":"ON","address":"2701 E 20TH ST, FARMINGTON, NM 87401","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7461,"lng":-108.2387,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":84,"name":"COCINA AZUL-HOLLY","type":"ON","address":"5916 HOLLY AVE. NE, ALBUQUERQUE, NM 87113","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0713,"lng":-106.6386,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":85,"name":"COUNTY LINE*","type":"ON","address":"9600 TRAMWAY NE, ALBUQUERQUE, NM 87122","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0701,"lng":-106.6761,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":86,"name":"CRACKERS  SPORTS BAR","type":"ON","address":"3704 E. MAIN, FARMINGTON, NM 87402","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7499,"lng":-108.2037,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":87,"name":"DAVE S VALLEY GRILL","type":"ON","address":"6601 4TH STREET NW STE N O P,  ALBUQUERQUE, NM 87107","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.083,"lng":-106.6305,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":88,"name":"DICK S CAFE","type":"ON","address":"2305 S. VALLEY DR., LAS CRUCES, NM 88005","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.3353,"lng":-106.7854,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":89,"name":"DIRTY BOURBON  THE","type":"ON","address":"9800 MONTGOMERY, ALBUQUERQUE, NM 87111","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0642,"lng":-106.6552,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":90,"name":"DOWNSHIFT BREWING-RUIDOSO","type":"ON","address":"2706 SUDDERTH DR, RUIDOSO, NM 88345","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.3338,"lng":-105.6595,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":91,"name":"DOWNTOWN DISTILLERY      L","type":"ON","address":"406 CENTRAL SW, ALBUQUERQUE, NM 87102","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0959,"lng":-106.6383,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":92,"name":"EL BRUNO S","type":"ON","address":"8806 4TH STREET NW, ALBUQUERQUE, NM 87114","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.1086,"lng":-106.6785,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":93,"name":"EL PINTO-BEVERAGE","type":"ON","address":"10500 4TH NW, ALBUQUERQUE, NM 87114","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0795,"lng":-106.6616,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":94,"name":"EL REY-ON PREMISE","type":"ON","address":"620 CENTRAL SW, ALBUQUERQUE, NM 87190","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.1025,"lng":-106.668,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":95,"name":"ELEPHANT RANCH-ON PREMISE","type":"ON","address":"3995 W PICACHO AVE, LAS CRUCES, NM 88007","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.3044,"lng":-106.7673,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":96,"name":"ELKS CLUB #1717","type":"ON","address":"322 WEST QUAY, ARTESIA, NM 88210","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.8387,"lng":-104.4185,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":97,"name":"EX NOVO BREWING COMPANY","type":"ON","address":"4895 CORRALES RD, CORRALES, NM 87048","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2245,"lng":-106.5781,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":98,"name":"EX NOVO BREWING-CENTRAL","type":"ON","address":"701 CENTRAL AVE. NW, ALBUQUERQUE, NM 87102","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0816,"lng":-106.6251,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":99,"name":"FARMESILLA  LLC","type":"ON","address":"1840 AVIENDA DE MESILLA, LAS CRUCES, NM 88005","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.3224,"lng":-106.7952,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":100,"name":"FRATERNAL ORDER EAGLES #4038","type":"ON","address":"980 N 17TH, LAS CRUCES, NM 88005","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.3449,"lng":-106.7402,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":101,"name":"GECKOS","type":"ON","address":"3500 CENTRAL SE, ALBUQUERQUE, NM 87106","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.1078,"lng":-106.6206,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":102,"name":"GOLD STREET PIZZA & MORE","type":"ON","address":"3211 COORS BLVD SW SUITE H1, ALBUQUERQUE, NM 87121","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.1018,"lng":-106.6738,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":103,"name":"HACIENDA DE MESILLA","type":"ON","address":"1891 AVENIDA DE MESILLA, MESILLA, NM 88005","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.2722,"lng":-106.8225,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":104,"name":"HIGH NOON SALOON","type":"ON","address":"425 SAN FELIPE NW, ALBUQUERQUE, NM 87104","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0795,"lng":-106.6813,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":105,"name":"HOLIDAZE RESTAURANT","type":"ON","address":"2827 N DAL PASO ST SUITE 136, HOBBS, NM 88240","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.6965,"lng":-103.102,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":106,"name":"HOPS & DOUGH TAPROOM","type":"ON","address":"6361 RIVERSIDE PLAZA STE H122A, ALBUQUERQUE, NM 87120","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0727,"lng":-106.6305,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":107,"name":"HORSE THEIF SHORTY S","type":"ON","address":"900 PASEO DEL PUEBLO NORTE, TAOS, NM 87571","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.405,"lng":-105.5785,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":108,"name":"HOTEL SANTA FE","type":"ON","address":"1501 PASEO DE PERALTA, SANTA FE, NM 87501","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.7099,"lng":-105.9031,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":109,"name":"KNOCK-OUTS","type":"ON","address":"311 CENTRAL NW, ALBUQUERQUE, NM 87102","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0872,"lng":-106.6351,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":110,"name":"LA ANTIGUA","type":"ON","address":"3601 N MAIN ST., ROSWELL, NM 88201","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.377,"lng":-104.5372,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":111,"name":"LA HACIENDA","type":"ON","address":"5 CARL CANNON RD, MORIARTY, NM 87035","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0135,"lng":-106.0439,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":112,"name":"LA LUNA @ LA FONDA","type":"ON","address":"108 S PLAZA, TAOS, NM 87571","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.4093,"lng":-105.5557,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":113,"name":"LAUTER HAUS BREWING CO","type":"ON","address":"1806 E 20TH ST, FARMINGTON, NM 87401","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.706,"lng":-108.2028,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":114,"name":"LUCKY BULL GRILL","type":"ON","address":"222 W. FOX STREET, P.O. BOX 2173, CARLSBAD, NM 88221","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.4208,"lng":-104.2041,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":115,"name":"MIKUNA GRILL","type":"ON","address":"48 NORTH ANGEL FIRE RD., ANGEL FIRE, NM 87710","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.3771,"lng":-105.2563,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":116,"name":"MISSION WINERY","type":"ON","address":"3423 CENTRAL AVENUE NE, ALBUQUERQUE, NM 87106","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0634,"lng":-106.6724,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":117,"name":"MOONWALK BEV","type":"ON","address":"505 CENTRAL AVE NW STE A & F, ALBUQUERQUE, NM 87102","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0892,"lng":-106.6381,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":118,"name":"MOOSE LODGE #2081","type":"ON","address":"514 N. MAIN ST., LAS CRUCES, NM 88001","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.3067,"lng":-106.7903,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":119,"name":"MOTHERLODE-ON PREMISE","type":"ON","address":"406 MAIN ST, RED RIVER, NM 87558","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7273,"lng":-105.4261,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":120,"name":"MULAS","type":"ON","address":"4908 CORRALES RD., CORRALES, NM 87048","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2417,"lng":-106.5993,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":121,"name":"NM VINTAGE WINES","type":"ON","address":"2310 AVENIDA DE MESILLA, MESILLA, NM 88046","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.2689,"lng":-106.7966,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":122,"name":"PACIFIC RIM - HOBBS","type":"ON","address":"1309 JOE HARVEY BLVD, HOBBS, NM 88240","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.7037,"lng":-103.1056,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":123,"name":"PEPPER S GRILL-ROSWELL","type":"ON","address":"500 NORTH MAIN, ROSWELL, NM 88201","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.3795,"lng":-104.5079,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":124,"name":"PICACHO HILLS C C","type":"ON","address":"6861 VIA CAMPESTRE, LAS CRUCES, NM 88005","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.3068,"lng":-106.771,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":125,"name":"PIG & FIG BAKERY & CAFE","type":"ON","address":"11 SHERWOOD BLVD, WHITE ROCK, NM 87544","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.8361,"lng":-106.2233,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":126,"name":"PIZZERIA LUCA","type":"ON","address":"8850 Holly Ave NE ste J, ALBUQUERQUE, NM 87191","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0752,"lng":-106.6328,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":127,"name":"PORTERS RESTAURANT & SMOKEHOUS","type":"ON","address":"2210 EAST 20TH ST., FARMINGTON, NM 87401","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7067,"lng":-108.2116,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":128,"name":"PUB AND GRUB","type":"ON","address":"52 N ANGEL FIRE RD, ANGEL FIRE, NM 87710","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.4191,"lng":-105.2539,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":129,"name":"QUALITY LIQUOR STORE-ON","type":"ON","address":"1400 S. MAIN, ROSWELL, NM 88203","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.373,"lng":-104.5431,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":130,"name":"RAD RETROCADE","type":"ON","address":"201 N. MAIN, LAS CRUCES, NM 88001","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.3082,"lng":-106.7334,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":131,"name":"RANGE CAFE-CENTRAL","type":"ON","address":"320 CENTRAL AVE SE, ALBUQUERQUE, NM 87102","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.1034,"lng":-106.6239,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":132,"name":"RED DOOR BAR","type":"ON","address":"509 CNETRAL AVE, ALBUQUERQUE, NM 87102","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0779,"lng":-106.6744,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":133,"name":"RED DOOR BREW-CLOVIS MAIN ST","type":"ON","address":"412 MAIN ST, CLOVIS, NM 88101","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":34.4215,"lng":-103.191,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":134,"name":"ROLLING STILL BROS     W","type":"ON","address":"110 PASEO DEL PUEBLO STE D, TAOS, NM 87571","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.4128,"lng":-105.539,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":135,"name":"RUBIO S","type":"ON","address":"116 S MAIN, AZTEC, NM 87410","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.8297,"lng":-108.0265,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":136,"name":"SALUD DE MESILLA","type":"ON","address":"1800 AVENIDA DE MESILLA STE B, LAS CRUCES, NM 88005","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.3358,"lng":-106.7777,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":137,"name":"SANDIA BAR-ON PREMISE","type":"ON","address":"4445 CORRALES ROAD, CORRALES, NM 87048","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2452,"lng":-106.577,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":138,"name":"SANDIA GOLF EVENT CENTER","type":"ON","address":"30 RAINBOW LANE, ALBUQUERQUE, NM 87113","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0661,"lng":-106.6773,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":139,"name":"SANTA FE BREWING TAP ROOM","type":"ON","address":"3600 CUTLER AVE, ALBUQUERQUE, NM 87110","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0648,"lng":-106.6467,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":140,"name":"SANTA FE BREWING-TAP HOUSE","type":"ON","address":"7 CALIENTE ROAD UNIT A-9, SANTA FE, NM 87508","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.6756,"lng":-105.9305,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":141,"name":"SEARED /  CHEESE AND COFFEE","type":"ON","address":"119 SAN PASQUALE AVE SW, ALBUQUERQUE, NM 87104","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0953,"lng":-106.6711,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":142,"name":"SLATE STREET BILLIARDS","type":"ON","address":"2003 SOUTHERN, RIO RANCHO, NM 87124","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2395,"lng":-106.6795,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":143,"name":"STATE LINE #2-ON PREMISE","type":"ON","address":"1222 SUNLAND PARK DR., SUNLAND PARK, NM 88063","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":31.8001,"lng":-106.5552,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":144,"name":"SUNDAY SERVICE MOTOR COMPANY","type":"ON","address":"2701 4TH STREET NW, ALBUQUERQUE, NM 87107","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.1017,"lng":-106.6789,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":145,"name":"TALL PINES BEER AND WINE","type":"ON","address":"2213 SUDDERTH DRIVE, RUIDOSO, NM 88345","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":33.3338,"lng":-105.6728,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":146,"name":"THE BISTRO","type":"ON","address":"201 MAIN ST., RED RIVER, NM 87558","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.683,"lng":-105.3893,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":147,"name":"THE HAPPY CAMPER CLUBHOUSE  W","type":"ON","address":"120 N. TOVAR SUITES A & B, DEMING, NM 88030","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.2756,"lng":-107.7748,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":148,"name":"THE HOPPER B","type":"ON","address":"4500 ARROWHEAD RIDGE STE D, RIO RANCHO, NM 87124","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2449,"lng":-106.6594,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":149,"name":"THE IVY","type":"ON","address":"3109 CENTRAL AVE NE, ALBUQUERQUE, NM 87106","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0808,"lng":-106.6847,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":150,"name":"THE MYSTIC","type":"ON","address":"2810 CERRILLOS RD, SANTA FE, NM 87505","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.6658,"lng":-105.911,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":151,"name":"TOP OF THE BLOCK","type":"ON","address":"7805 ENCHANTED HILLS BLVD NE, RIO RANCHO, NM 87144","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.253,"lng":-106.6598,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":152,"name":"TURQUOISE DESERT-JAGER DR","type":"ON","address":"4405 JAGER DR NE, RIO RANCHO, NM 87144","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2495,"lng":-106.6572,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":153,"name":"TURTLE MOUNTAIN-ENCHANTED HILL","type":"ON","address":"7835 ENCHANTED HILLS M-101/103, RIO RANCHO, NM 87144","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2152,"lng":-106.6891,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":154,"name":"VFW 10124-L.C.","type":"ON","address":", 709 S VALLEY DR LC  NM 88005, LAS CRUCES, NM 88005","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.3103,"lng":-106.7358,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":155,"name":"VILLAGE STOP & GO-ON PREMISE","type":"ON","address":"2436 MAIN ST ON 522, QUESTA, NM 87556","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.714,"lng":-105.5698,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":156,"name":"VINE","type":"ON","address":"601 W MAIN ST, RED RIVER, NM 87558","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.7277,"lng":-105.4286,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":157,"name":"WESTERN BAR-ON PREM","type":"ON","address":"304 BURRO AVE, CLOUDCROFT, NM 88317","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.944,"lng":-105.7697,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":158,"name":"YELLOW BRIX","type":"ON","address":"201 N CANAL STREET, CARLSBAD, NM 88220","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":32.4347,"lng":-104.2019,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":159,"name":"ABQ CONVENTION CENTER      L","type":"ON","address":"401 2ND ST NW, ALBUQUERQUE, NM 87102","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0797,"lng":-106.642,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":160,"name":"M TUCCI S MODERN","type":"ON","address":"1908 WELLSPRING AVE SE, RIO RANCHO, NM 87124","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2155,"lng":-106.6329,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":161,"name":"MIDTOWN MKT & SPIRISTS (ON)","type":"ON","address":"PO BOX 259, HWY 522, ARROYO HONDO, NM 87513","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":36.5218,"lng":-105.6181,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":162,"name":"CURRY COUNTY EVENTS CENTER","type":"ON","address":"1900 E BRADY AVE, CLOVIS, NM 88101","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":34.4203,"lng":-103.1785,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":163,"name":"OJOS LOCOS SPORTS CANTINA","type":"ON","address":"2105-A LOUISIANA BLVD NE, ALBUQUERQUE, NM 87110","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0606,"lng":-106.6338,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":164,"name":"RANGE CAFE  THE","type":"ON","address":"925 CAMINO DEL PUEBLO, BERNALILLO, NM 87004","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.2919,"lng":-106.5226,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":165,"name":"RANGE CAFE - LOS LUNAS","type":"ON","address":"740 MAIN STREET, LOS LUNAS, NM 87031","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":34.8218,"lng":-106.7073,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":166,"name":"RANGE CAFE-COORS","type":"ON","address":"10019 COORS BLVD NW, ALBUQUERQUE, NM 87114","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0999,"lng":-106.6667,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":167,"name":"RANGE CAFE-RIO GRANDE","type":"ON","address":"1050 RIO GRANDE BLVD NW, ALBUQUERQUE, NM 87104","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0988,"lng":-106.6778,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":168,"name":"RANGE CAFE-WYOMING       W","type":"ON","address":"4401 WYOMING BLVD, ALBUQUERQUE, NM 87111","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.103,"lng":-106.6253,"q90_bourbon":0,"q90_rye":0,"q90_of":0},{"id":169,"name":"SANDIA GOLF COURSE","type":"ON","address":"30 RAINBOW LN, ALBUQUERQUE, NM 87113","status":"current","contact":"","email":"","phone":"","distributorRep":"","lastContact":"","notes":"","bourbon":0,"rye":0,"oldFashioned":0,"lat":35.0705,"lng":-106.6282,"q90_bourbon":0,"q90_rye":0,"q90_of":0}];
+let accounts=JSON.parse(JSON.stringify(RAW));
+let nextId=Math.max(...accounts.map(a=>a.id))+1;
+
+// ── STATE ──
+let activeFilter='all',activeTab='map',currentId=null,editingId=null,editStatus='current';
+let filtered=[...accounts];
+let gMap=null,routeMap=null,markers=[],routeStops=[],routeMarkers=[],routePolyline=null;
+const GEOCODE_KEY='AIzaSyB_EVeIZ3VHkxAtaYSer_Dqve1mveU8yBs';
+const GEO_CACHE='br_geo_v3';
+
+// ── REGIONS ──
+const REGIONS=[
+  {id:'abq',name:'Albuquerque / Rio Rancho',cities:['ALBUQUERQUE','RIO RANCHO','CORRALES','BERNALILLO','LOS LUNAS','MORIARTY','SANTA ANA PUEBLO']},
+  {id:'sf',name:'Santa Fe / Taos / North',cities:['SANTA FE','TAOS','EL PRADO','ESPANOLA','LOS ALAMOS','WHITE ROCK','TIERRA AMARILLA','RED RIVER','ANGEL FIRE','QUESTA','ARROYO HONDO','CLAYTON','LAS VEGAS']},
+  {id:'farm',name:'Farmington / Northwest',cities:['FARMINGTON','AZTEC','BLOOMFIELD']},
+  {id:'roswell',name:'Roswell / Carlsbad / SE',cities:['ROSWELL','CARLSBAD','ARTESIA','RUIDOSO','CLOUDCROFT','ALAMOGORDO','LA LUZ']},
+  {id:'lc',name:'Las Cruces / South',cities:['LAS CRUCES','MESILLA','SUNLAND PARK','DEMING','ELEPHANT BUTTE','T OR C']},
+  {id:'east',name:'Hobbs / Clovis / East',cities:['HOBBS','CLOVIS']}
+];
+function getRegion(a){
+  const u=a.address.toUpperCase();
+  for(const r of REGIONS){ if(r.cities.some(c=>u.includes(c+',')||u.includes(c+' '))) return r.id; }
+  return 'other';
+}
+
+// ── GEOCODING ──
+function geoLoad(){ try{ return JSON.parse(localStorage.getItem(GEO_CACHE)||'{}'); }catch(e){ return {}; } }
+function geoSave(c){ try{ localStorage.setItem(GEO_CACHE,JSON.stringify(c)); }catch(e){} }
+async function geocodeAddr(addr){
+  try{
+    const r=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr)+'&key='+GEOCODE_KEY+'&region=us&components=administrative_area:NM|country:US');
+    const d=await r.json();
+    if(d.status==='OK'){ const l=d.results[0].geometry.location; return {lat:l.lat,lng:l.lng}; }
+  }catch(e){
+    if(e.message&&e.message.includes('Failed to fetch')){
+      showMapError('Geocoding API blocked. Add your GitHub Pages domain to the Geocoding API key restrictions in Google Cloud Console, or remove all restrictions from both API keys.');
+    }
+  }
+  return null;
+}
+async function geocodeAll(){
+  const cache=geoLoad();
+  accounts.forEach(a=>{ if(cache[a.id]){ a.lat=cache[a.id].lat; a.lng=cache[a.id].lng; } });
+  const need=accounts.filter(a=>!cache[a.id]);
+  if(!need.length) return;
+  const prog=document.getElementById('geo-progress');
+  const bar=document.getElementById('geo-bar');
+  const txt=document.getElementById('geo-text');
+  prog.classList.add('show');
+  let done=0;
+  for(let i=0;i<need.length;i+=8){
+    const batch=need.slice(i,i+8);
+    await Promise.all(batch.map(async a=>{
+      const r=await geocodeAddr(a.address);
+      if(r){ a.lat=r.lat; a.lng=r.lng; cache[a.id]=r; }
+      done++;
+      bar.style.width=(done/need.length*100)+'%';
+      txt.textContent='Geocoding '+done+' of '+need.length+' — saved locally after this';
+    }));
+    geoSave(cache);
+    await new Promise(r=>setTimeout(r,50));
+  }
+  prog.classList.remove('show');
+}
+
+// ── PIN COLORS ──
+function prospectColor(a){
+  if(!a.lastContact) return {fill:'#E0E0DC',stroke:'#9A9A94'};
+  const days=Math.floor((Date.now()-new Date(a.lastContact))/(864e5));
+  if(days<=30)  return {fill:'#D4EDDA',stroke:'#1A6B4A'};
+  if(days<=60)  return {fill:'#FFF3CD',stroke:'#B8860B'};
+  return              {fill:'#FCEAEA',stroke:'#A32D2D'};
+}
+function pinFill(a){
+  if(a.status==='prospect') return prospectColor(a).fill;
+  return a.type==='ON'?'#185FA5':'#B5640A';
+}
+function pinStroke(a){
+  if(a.status==='prospect') return prospectColor(a).stroke;
+  return a.type==='ON'?'#0C447C':'#7A3F00';
+}
+function pinScale(a){
+  const t=a.bourbon+a.rye+a.oldFashioned;
+  if(a.status==='prospect') return 8;
+  if(t===0) return 8; if(t<100) return 10; if(t<300) return 13; if(t<700) return 16; return 20;
+}
+function makeSVG(a,num){
+  const sz=num?14:pinScale(a);
+  const fill=num?'#1A1108':pinFill(a);
+  const stroke=num?'#E8A84A':pinStroke(a);
+  const dash=a.status==='prospect'&&!num?'stroke-dasharray="4,2"':'';
+  const dot=a.status==='prospect'&&!num?'<circle cx="'+sz+'" cy="'+sz+'" r="3" fill="'+stroke+'"/>':'';
+  const txt=num?'<text x="'+sz+'" y="'+(sz+4)+'" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="'+(sz<14?9:11)+'" font-weight="600" fill="#E8A84A">'+num+'</text>':'';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+(sz*2)+'" height="'+(sz*2)+'" viewBox="0 0 '+(sz*2)+' '+(sz*2)+'"><circle cx="'+sz+'" cy="'+sz+'" r="'+(sz-2)+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2.5" '+dash+'/>'+dot+txt+'</svg>';
+}
+function mkIcon(a,num){
+  const sz=num?14:pinScale(a);
+  return {url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(makeSVG(a,num)),scaledSize:new google.maps.Size(sz*2,sz*2),anchor:new google.maps.Point(sz,sz)};
+}
+
+// ── GOOGLE MAPS ──
+async function initMap(){
+  if(gMap) return;
+  const mapEl=document.getElementById('map');
+  try{
+    gMap=new google.maps.Map(mapEl,{
+      center:{lat:34.5,lng:-106.5},zoom:7,
+      mapTypeControl:true,
+      mapTypeControlOptions:{style:google.maps.MapTypeControlStyle.HORIZONTAL_BAR,position:google.maps.ControlPosition.TOP_RIGHT},
+      streetViewControl:false,fullscreenControl:false,
+      styles:[{featureType:'poi',elementType:'labels',stylers:[{visibility:'off'}]},{featureType:'transit',stylers:[{visibility:'off'}]}]
+    });
+    await geocodeAll();
+    renderMarkers();
+    document.getElementById('map-error').style.display='none';
+  }catch(err){
+    showMapError('Map failed to initialize: '+err.message);
+  }
+}
+function showMapError(msg){
+  const el=document.getElementById('map-error');
+  el.style.display='flex';
+  document.getElementById('map-error-msg').textContent=msg;
+}
+window.gm_authFailure=function(){ showMapError('Google Maps API key error. Check that your Maps JavaScript API key is unrestricted or allows this domain.'); };
+
+function renderMarkers(){
+  markers.forEach(m=>m.setMap(null)); markers=[];
+  if(!gMap) return;
+  filtered.forEach(a=>{
+    if(!a.lat||!a.lng) return;
+    const marker=new google.maps.Marker({position:{lat:a.lat,lng:a.lng},map:gMap,icon:mkIcon(a),title:a.name});
+    const total=a.bourbon+a.rye+a.oldFashioned;
+    const inR=routeStops.some(s=>s.id===a.id);
+    const iw=new google.maps.InfoWindow({
+      content:'<div class="pop-name">'+esc(a.name)+'</div>'
+        +'<div class="pop-type">'+(a.type==='ON'?'On-Premise':'Off-Premise')+' &middot; '+(a.status==='prospect'?'Prospect':'Current')+'</div>'
+        +'<div style="font-size:12px;color:#666;margin-top:3px">'+(total>0?total+' cases/yr':'No volume data')+'</div>'
+        +'<button class="pop-btn" onclick="openPanel('+a.id+')">View details</button>'
+        +'<button class="route-btn" onclick="addToRoute('+a.id+');this.textContent='Added!';this.disabled=true">'+(inR?'In route':'+ Add to route')+'</button>',
+      maxWidth:220
+    });
+    marker.addListener('click',()=>{ markers.forEach(x=>x._iw&&x._iw.close()); iw.open(gMap,marker); });
+    marker._iw=iw;
+    markers.push(marker);
+  });
+}
+
+// ── FILTER ──
+function setFilter(el,f){
+  activeFilter=f;
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('act'));
+  el.classList.add('act');
+  applyFilters();
+}
+function applyFilters(){
+  const q=document.getElementById('search').value.trim().toLowerCase();
+  filtered=accounts.filter(a=>{
+    const mt=activeFilter==='all'?true:activeFilter==='on'?a.type==='ON':activeFilter==='off'?a.type==='OFF':activeFilter==='pro'?a.status==='prospect':activeFilter==='bourbon'?a.bourbon>0:activeFilter==='rye'?a.rye>0:activeFilter==='of'?a.oldFashioned>0:true;
+    const mq=!q||[a.name,a.address,a.contact||'',a.distributorRep||'',a.notes||''].some(s=>s.toLowerCase().includes(q));
+    return mt&&mq;
+  });
+  if(activeTab==='map') renderMarkers();
+  else if(activeTab==='list') renderList();
+}
+
+// ── TREND SPARK ──
+function makeTrendSpark(a){
+  const q90=a.q90_bourbon+a.q90_rye+a.q90_of;
+  if(!q90) return '';
+  const ann=a.bourbon+a.rye+a.oldFashioned;
+  const exp=Math.round(ann/4);
+  const diff=q90-exp;
+  const pct=exp>0?Math.round(Math.abs(diff)/exp*100):0;
+  const col=diff>0?'#0C6B3C':diff<0?'#A32D2D':'#888';
+  const lbl=diff>0?'<span class="trend-label trend-up">&#x25B2; '+pct+'% vs avg</span>':diff<0?'<span class="trend-label trend-down">&#x25BC; '+pct+'% vs avg</span>':'<span class="trend-label trend-flat">On track</span>';
+  const mx=Math.max(exp,q90,1);
+  const h1=Math.max(2,Math.round(exp/mx*16)), h2=Math.max(2,Math.round(q90/mx*16));
+  return '<div class="trend-wrap"><div class="trend-spark"><div class="trend-bar" style="height:'+h1+'px;background:#D0D0CA"></div><div class="trend-bar" style="height:'+h2+'px;background:'+col+'"></div></div><span style="font-size:11px;color:var(--muted)">90d: '+q90+'</span>'+lbl+'</div>';
+}
+
+// ── LIST ──
+function renderList(){
+  const el=document.getElementById('litems');
+  document.getElementById('lcount').textContent=filtered.length+' accounts';
+  if(!filtered.length){el.innerHTML='<div style="text-align:center;padding:50px 20px;color:var(--muted)">No accounts match.</div>';return;}
+  el.innerHTML=filtered.map(a=>{
+    const t=a.bourbon+a.rye+a.oldFashioned;
+    const vols=t>0?'<span class="vchip vc-b">B:'+a.bourbon+'</span><span class="vchip vc-r">R:'+a.rye+'</span><span class="vchip vc-o">OF:'+a.oldFashioned+'</span>':'<span class="vchip vc-n">No volume data</span>';
+    const cn=a.contact?'<div class="cnrow"><strong>'+esc(a.contact)+'</strong>'+(a.phone?' &middot; '+esc(a.phone):'')+'</div>':'';
+    const np=a.notes?'<div class="notes-preview">'+esc(a.notes)+'</div>':'';
+    return '<div class="acard" onclick="openPanel('+a.id+')">'
+      +'<div class="atop"><div class="aname">'+esc(a.name)+'</div><div class="tbadge t-'+a.type.toLowerCase()+'">'+a.type+'</div></div>'
+      +'<div class="aaddr">'+esc(a.address)+'</div>'
+      +'<div class="vrow">'+vols+'</div>'+makeTrendSpark(a)+cn+np+'</div>';
+  }).join('');
+}
+
+// ── PANEL ──
+function openPanel(id){
+  currentId=id;
+  const a=accounts.find(x=>x.id===id); if(!a) return;
+  document.getElementById('p-name').textContent=a.name;
+  document.getElementById('p-addr').textContent=a.address;
+  document.getElementById('p-badges').innerHTML='<span class="badge bd-'+a.type.toLowerCase()+'">'+(a.type==='ON'?'On-Premise':'Off-Premise')+'</span><span class="badge bd-'+(a.status==='current'?'cur':'pro')+'">'+(a.status==='current'?'Current':'Prospect')+'</span>';
+  const fv=(v,fb)=>v&&v.trim()?esc(v):'<span class="empty">'+(fb||'Not set')+'</span>';
+  document.getElementById('p-contact').innerHTML=fv(a.contact);
+  document.getElementById('p-phone').innerHTML=a.phone?'<a href="tel:'+esc(a.phone)+'">'+esc(a.phone)+'</a>':'<span class="empty">Not set</span>';
+  document.getElementById('p-email').innerHTML=a.email?'<a href="mailto:'+esc(a.email)+'">'+esc(a.email)+'</a>':'<span class="empty">Not set</span>';
+  document.getElementById('p-rep').innerHTML=fv(a.distributorRep);
+  document.getElementById('p-last').innerHTML=fv(a.lastContact);
+  document.getElementById('p-status').textContent=a.status==='current'?'Current':'Prospect';
+  const total=a.bourbon+a.rye+a.oldFashioned;
+  const bars=[{l:'Bourbon',v:a.bourbon,c:'#B5640A',bg:'#FFF0DC'},{l:'Rye',v:a.rye,c:'#6B3FA0',bg:'#F0E9FF'},{l:'Old Fashioned',v:a.oldFashioned,c:'#1A6B4A',bg:'#E2F5EC'}];
+  document.getElementById('p-vols').innerHTML=bars.map(b=>{
+    const p=total>0?Math.round(b.v/total*100):0;
+    return '<div class="vbrow"><div class="vbtop"><span class="vbname" style="color:'+b.c+'">'+b.l+'</span><span class="vbnum">'+b.v+' cases'+(total>0?' ('+p+'%)':'')+'</span></div><div class="vtrack" style="background:'+b.bg+'"><div class="vfill" style="width:'+p+'%;background:'+b.c+'"></div></div></div>';
+  }).join('');
+  const q90bars=[{l:'Bourbon',v:a.q90_bourbon,ann:a.bourbon,c:'#B5640A'},{l:'Rye',v:a.q90_rye,ann:a.rye,c:'#6B3FA0'},{l:'Old Fashioned',v:a.q90_of,ann:a.oldFashioned,c:'#1A6B4A'}];
+  document.getElementById('p-q90').innerHTML='<div class="q90-grid">'+q90bars.map(b=>{
+    const exp=Math.round(b.ann/4); const d=b.v-exp;
+    const dc=d>0?'delta-up':d<0?'delta-down':'delta-flat';
+    const ds=(d>=0?'+':'')+d;
+    return '<div class="q90-cell"><div class="q90-num" style="color:'+b.c+'">'+b.v+'</div><div class="q90-name">'+b.l+'</div><div class="q90-delta '+dc+'">'+(b.ann>0?ds+' vs avg':'&mdash;')+'</div></div>';
+  }).join('')+'</div>';
+  const nc=document.getElementById('p-notes-content');
+  nc.innerHTML=a.notes&&a.notes.trim()?'<div class="notes-area">'+esc(a.notes)+'</div>':'<div class="notes-empty">No notes yet.</div>';
+  const ov=document.getElementById('pov');
+  ov.style.display='flex'; setTimeout(()=>ov.classList.add('open'),10);
+}
+function closePanel(){ const ov=document.getElementById('pov'); ov.classList.remove('open'); setTimeout(()=>{ov.style.display='none';currentId=null;},200); }
+function addToRouteFromPanel(){ if(currentId) addToRoute(currentId); closePanel(); switchTab('route'); }
+
+// ── EDIT ──
+function openEdit(id){
+  editingId=id; const a=accounts.find(x=>x.id===id);
+  document.getElementById('mtitle').textContent='Edit account';
+  document.getElementById('f-name').value=a.name;
+  document.getElementById('f-addr').value=a.address;
+  document.getElementById('f-type').value=a.type;
+  document.getElementById('f-contact').value=a.contact||'';
+  document.getElementById('f-phone').value=a.phone||'';
+  document.getElementById('f-email').value=a.email||'';
+  document.getElementById('f-rep').value=a.distributorRep||'';
+  document.getElementById('f-last').value=a.lastContact||'';
+  document.getElementById('f-bourbon').value=a.bourbon||'';
+  document.getElementById('f-rye').value=a.rye||'';
+  document.getElementById('f-of').value=a.oldFashioned||'';
+  document.getElementById('f-q90b').value=a.q90_bourbon||'';
+  document.getElementById('f-q90r').value=a.q90_rye||'';
+  document.getElementById('f-q90o').value=a.q90_of||'';
+  document.getElementById('f-notes').value=a.notes||'';
+  selStatus(a.status);
+  const ov=document.getElementById('eov'); ov.style.display='flex'; setTimeout(()=>ov.classList.add('open'),10);
+}
+function openAdd(){
+  editingId=null;
+  document.getElementById('mtitle').textContent='Add account';
+  ['f-name','f-addr','f-contact','f-phone','f-email','f-rep','f-last','f-bourbon','f-rye','f-of','f-q90b','f-q90r','f-q90o','f-notes'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('f-type').value='ON'; selStatus('current');
+  const ov=document.getElementById('eov'); ov.style.display='flex'; setTimeout(()=>ov.classList.add('open'),10);
+}
+function closeEdit(){ const ov=document.getElementById('eov'); ov.classList.remove('open'); setTimeout(()=>ov.style.display='none',200); }
+function selStatus(s){
+  editStatus=s;
+  document.getElementById('opt-cur').className='sopt'+(s==='current'?' s-cur':'');
+  document.getElementById('opt-pro').className='sopt'+(s==='prospect'?' s-pro':'');
+}
+function saveEdit(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){alert('Account name is required.');return;}
+  const d={name,address:document.getElementById('f-addr').value.trim(),type:document.getElementById('f-type').value,status:editStatus,
+    contact:document.getElementById('f-contact').value.trim(),phone:document.getElementById('f-phone').value.trim(),
+    email:document.getElementById('f-email').value.trim(),distributorRep:document.getElementById('f-rep').value.trim(),
+    lastContact:document.getElementById('f-last').value,
+    bourbon:parseInt(document.getElementById('f-bourbon').value)||0,rye:parseInt(document.getElementById('f-rye').value)||0,oldFashioned:parseInt(document.getElementById('f-of').value)||0,
+    q90_bourbon:parseInt(document.getElementById('f-q90b').value)||0,q90_rye:parseInt(document.getElementById('f-q90r').value)||0,q90_of:parseInt(document.getElementById('f-q90o').value)||0,
+    notes:document.getElementById('f-notes').value.trim()};
+  if(editingId){ const i=accounts.findIndex(x=>x.id===editingId); accounts[i]={...accounts[i],...d}; closeEdit(); closePanel(); applyFilters(); openPanel(editingId); }
+  else{ accounts.push({id:nextId++,lat:34.5,lng:-106.5,...d}); closeEdit(); applyFilters(); }
+}
+
+// ── ROUTE ──
+function initRouteMap(){
+  if(routeMap) return;
+  routeMap=new google.maps.Map(document.getElementById('route-map'),{center:{lat:34.5,lng:-106.5},zoom:6,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});
+}
+function addToRoute(id){
+  if(routeStops.some(s=>s.id===id)) return;
+  const a=accounts.find(x=>x.id===id); if(!a) return;
+  routeStops.push(a); renderRoutePage();
+}
+function removeFromRoute(id){ routeStops=routeStops.filter(s=>s.id!==id); renderRoutePage(); }
+function clearRoute(){ routeStops=[]; renderRoutePage(); }
+function addRegionToRoute(rid){
+  accounts.filter(a=>getRegion(a)===rid&&a.status==='current').forEach(a=>{ if(!routeStops.some(s=>s.id===a.id)) routeStops.push(a); });
+  renderRoutePage();
+}
+function optimizeRoute(){
+  if(routeStops.length<3){alert('Add at least 3 stops to optimize.');return;}
+  const stops=[...routeStops],vis=new Array(stops.length).fill(false),order=[];
+  let cur=0; vis[0]=true; order.push(stops[0]);
+  for(let i=1;i<stops.length;i++){
+    let best=-1,bd=Infinity;
+    for(let j=0;j<stops.length;j++){ if(!vis[j]){ const d=hdist(stops[cur].lat,stops[cur].lng,stops[j].lat,stops[j].lng); if(d<bd){bd=d;best=j;} } }
+    vis[best]=true; order.push(stops[best]); cur=best;
+  }
+  routeStops=order; renderRoutePage();
+}
+function hdist(a,b,c,d){ const R=3959,dL=(c-a)*Math.PI/180,dG=(d-b)*Math.PI/180,x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dG/2)**2; return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); }
+function totalDist(){ let d=0; for(let i=1;i<routeStops.length;i++) d+=hdist(routeStops[i-1].lat||34.5,routeStops[i-1].lng||-106.5,routeStops[i].lat||34.5,routeStops[i].lng||-106.5); return Math.round(d); }
+function openInGoogleMaps(){
+  if(routeStops.length<2){alert('Add at least 2 stops first.');return;}
+  const wp=routeStops.slice(1,-1).map(s=>encodeURIComponent(s.address)).join('/');
+  window.open('https://www.google.com/maps/dir/'+encodeURIComponent(routeStops[0].address)+(wp?'/'+wp:'')+'/'+encodeURIComponent(routeStops[routeStops.length-1].address),'_blank');
+}
+function drawRoute(){
+  if(!routeMap) return;
+  routeMarkers.forEach(m=>m.setMap(null)); routeMarkers=[];
+  if(routePolyline){routePolyline.setMap(null);routePolyline=null;}
+  if(!routeStops.length) return;
+  const bounds=new google.maps.LatLngBounds();
+  routeStops.forEach((a,i)=>{
+    const pos={lat:a.lat||34.5,lng:a.lng||-106.5};
+    const m=new google.maps.Marker({position:pos,map:routeMap,icon:mkIcon(a,i+1),title:a.name});
+    routeMarkers.push(m); bounds.extend(pos);
+  });
+  if(routeStops.length>1){ routePolyline=new google.maps.Polyline({path:routeStops.map(a=>({lat:a.lat||34.5,lng:a.lng||-106.5})),strokeColor:'#185FA5',strokeOpacity:.8,strokeWeight:3,map:routeMap}); }
+  routeMap.fitBounds(bounds,{top:20,right:20,bottom:20,left:20});
+}
+function renderRoutePage(){
+  document.getElementById('route-count').textContent=routeStops.length+' stop'+(routeStops.length===1?'':'s');
+  document.getElementById('rs-stops').textContent=routeStops.length;
+  if(routeStops.length>=2){ const d=totalDist(); document.getElementById('rs-dist').textContent=d.toLocaleString(); document.getElementById('rs-time').textContent=Math.round(d/45*60)+'m'; }
+  else{ document.getElementById('rs-dist').textContent='—'; document.getElementById('rs-time').textContent='—'; }
+  document.getElementById('region-btns').innerHTML=REGIONS.map(r=>{
+    const cnt=accounts.filter(a=>getRegion(a)===r.id&&a.status==='current').length;
+    const allIn=cnt>0&&accounts.filter(a=>getRegion(a)===r.id&&a.status==='current').every(a=>routeStops.some(s=>s.id===a.id));
+    return '<button class="region-sel-btn'+(allIn?' sel':'')+'" onclick="addRegionToRoute(''+r.id+'')">'+r.name+'<br><span style="font-size:10px;opacity:.7">'+cnt+' current</span></button>';
+  }).join('');
+  const sl=document.getElementById('route-stops');
+  if(!routeStops.length){ sl.innerHTML='<div class="route-empty">No stops yet. Add from map, list, or by region above.</div>'; }
+  else{ sl.innerHTML='<button class="gmaps-btn" onclick="openInGoogleMaps()">&#x1F5FA; Open full route in Google Maps</button>'+routeStops.map((a,i)=>'<div class="route-stop"><div class="stop-num">'+(i+1)+'</div><div class="stop-body"><div class="stop-name">'+esc(a.name)+'</div><div class="stop-addr">'+esc(a.address)+'</div>'+(i>0?'<div class="stop-dist">~'+Math.round(hdist(routeStops[i-1].lat||34.5,routeStops[i-1].lng||-106.5,a.lat||34.5,a.lng||-106.5))+' mi from prev</div>':'')+'</div><button class="stop-remove" onclick="removeFromRoute('+a.id+')">&#x00D7;</button></div>').join(''); }
+  drawRoute();
+}
+function routeSearch(){
+  const q=document.getElementById('route-search').value.trim().toLowerCase();
+  const sug=document.getElementById('suggestions');
+  if(q.length<2){sug.style.display='none';return;}
+  const hits=accounts.filter(a=>a.name.toLowerCase().includes(q)||a.address.toLowerCase().includes(q)).slice(0,6);
+  if(!hits.length){sug.style.display='none';return;}
+  sug.style.display='block';
+  sug.innerHTML=hits.map(a=>'<div class="suggestion-item" onclick="addToRoute('+a.id+');document.getElementById('route-search').value='';document.getElementById('suggestions').style.display='none'">'+esc(a.name)+'<br><span style="font-size:11px;color:var(--muted)">'+esc(a.address)+'</span></div>').join('');
+}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  const el=document.getElementById('dash-content');
+  const cur=accounts.filter(a=>a.status==='current');
+  const pros=accounts.filter(a=>a.status==='prospect');
+  const noVol=cur.filter(a=>a.bourbon+a.rye+a.oldFashioned===0);
+  const today=new Date();
+  const overdue=cur.filter(a=>{ if(!a.lastContact) return true; return (today-new Date(a.lastContact))/864e5>60; });
+  const totalB=accounts.reduce((s,a)=>s+a.bourbon,0),totalR=accounts.reduce((s,a)=>s+a.rye,0),totalOF=accounts.reduce((s,a)=>s+a.oldFashioned,0);
+  const totalQ90B=accounts.reduce((s,a)=>s+a.q90_bourbon,0),totalQ90R=accounts.reduce((s,a)=>s+a.q90_rye,0),totalQ90OF=accounts.reduce((s,a)=>s+a.q90_of,0);
+  const totalQ90=totalQ90B+totalQ90R+totalQ90OF;
+  const dropped=accounts.filter(a=>{ const q=a.q90_bourbon+a.q90_rye+a.q90_of,ann=a.bourbon+a.rye+a.oldFashioned; if(!ann||!q) return false; return q<Math.round(ann/4)*0.8; });
+  let h='';
+  h+='<div class="dash-title">Overview</div><div class="kpi-grid">';
+  h+='<div class="kpi-card"><div class="kpi-label">Total accounts</div><div class="kpi-val">'+accounts.length+'</div><div class="kpi-sub">'+cur.length+' current &middot; '+pros.length+' prospect</div></div>';
+  h+='<div class="kpi-card"><div class="kpi-label">Annual volume</div><div class="kpi-val">'+((totalB+totalR+totalOF)||0).toLocaleString()+'</div><div class="kpi-sub">cases / yr all products</div></div>';
+  h+='<div class="kpi-card warn"><div class="kpi-label">No volume data</div><div class="kpi-val">'+noVol.length+'</div><div class="kpi-sub">current accounts</div></div>';
+  h+='<div class="kpi-card alert"><div class="kpi-label">Overdue visits</div><div class="kpi-val">'+overdue.length+'</div><div class="kpi-sub">not contacted 60+ days</div></div></div>';
+  h+='<div class="dash-title">90-day volume</div><div class="kpi-grid">';
+  h+='<div class="kpi-card"><div class="kpi-label">Total 90-day</div><div class="kpi-val">'+(totalQ90||0).toLocaleString()+'</div><div class="kpi-sub">cases across all products</div></div>';
+  h+='<div class="kpi-card'+(dropped.length?' alert':'')+'"><div class="kpi-label">Volume drops</div><div class="kpi-val">'+dropped.length+'</div><div class="kpi-sub">accounts &gt;20% below avg</div></div></div>';
+  h+='<div class="dash-title">Customers</div><div class="kpi-grid">';
+  h+='<div class="kpi-card"><div class="kpi-label">On-Premise</div><div class="kpi-val">'+cur.filter(a=>a.type==='ON').length+'</div><div class="kpi-sub">bars &amp; restaurants</div></div>';
+  h+='<div class="kpi-card"><div class="kpi-label">Off-Premise</div><div class="kpi-val">'+cur.filter(a=>a.type==='OFF').length+'</div><div class="kpi-sub">retail &amp; liquor stores</div></div></div>';
+  h+='<div class="dash-title">Volume by product</div><div class="prod-card">';
+  const prods=[{n:'Bourbon',v:totalB,q:totalQ90B,c:'#B5640A',bg:'#FFF0DC'},{n:'Rye',v:totalR,q:totalQ90R,c:'#6B3FA0',bg:'#F0E9FF'},{n:'Old Fashioned',v:totalOF,q:totalQ90OF,c:'#1A6B4A',bg:'#E2F5EC'}];
+  const maxP=Math.max(...prods.map(p=>p.v),1);
+  prods.forEach(p=>{
+    const exp=Math.round(p.v/4),d=p.q-exp,dc=d>0?'delta-up':d<0?'delta-down':'delta-flat',ds=(d>=0?'+':'')+d;
+    h+='<div class="prod-row"><div class="prod-name" style="color:'+p.c+'">'+p.n+'</div><div class="prod-track-wrap"><div class="prod-sub-label">Annual</div><div class="prod-track"><div class="prod-fill" style="width:'+(p.v/maxP*100)+'%;background:'+p.c+'"></div></div><div class="prod-sub-label" style="margin-top:4px">Last 90d</div><div class="prod-track" style="background:'+p.bg+'"><div class="prod-fill" style="width:'+(Math.min(p.q,p.v)/Math.max(p.v,1)*100)+'%;background:'+p.c+';opacity:.65"></div></div></div><div class="prod-num"><div>'+p.v.toLocaleString()+'</div><div style="font-size:11px"><span class="'+dc+'">'+(p.v>0?ds:'&mdash;')+'</span></div></div></div>';
+  });
+  h+='</div>';
+  h+='<div class="dash-title">Volume by region</div>';
+  REGIONS.forEach(r=>{
+    const ras=accounts.filter(a=>getRegion(a)===r.id);
+    const rb=ras.reduce((s,a)=>s+a.bourbon,0),rr=ras.reduce((s,a)=>s+a.rye,0),ro=ras.reduce((s,a)=>s+a.oldFashioned,0);
+    const mx=Math.max(rb,rr,ro,1);
+    h+='<div class="region-card"><div class="region-name">'+r.name+'<span class="region-count">'+ras.filter(a=>a.status==='current').length+' accounts</span></div><div class="region-bars">';
+    [{n:'Bourbon',v:rb,c:'#B5640A'},{n:'Rye',v:rr,c:'#6B3FA0'},{n:'Old Fashioned',v:ro,c:'#1A6B4A'}].forEach(p=>{
+      h+='<div class="region-bar-row"><div class="region-bar-label">'+p.n+'</div><div class="region-bar-track"><div class="region-bar-fill" style="width:'+(p.v/mx*100)+'%;background:'+p.c+'"></div></div><div class="region-bar-num">'+p.v.toLocaleString()+'</div></div>';
+    });
+    h+='</div></div>';
+  });
+  if(dropped.length){
+    h+='<div class="dash-title">Volume drops <span style="font-weight:400;color:var(--muted)">&gt;20% below quarterly avg</span></div><div class="alert-list">';
+    h+=dropped.map(a=>{ const q=a.q90_bourbon+a.q90_rye+a.q90_of,exp=Math.round((a.bourbon+a.rye+a.oldFashioned)/4),pct=Math.round((q-exp)/exp*100); return '<div class="alert-item overdue" onclick="openPanel('+a.id+')" ><div><div class="alert-name">'+esc(a.name)+'</div><div style="font-size:11px;color:var(--muted)">'+esc(a.address.split(',').slice(-2).join(',').trim())+'</div></div><span class="alert-tag tag-overdue">'+pct+'%</span></div>'; }).join('');
+    h+='</div>';
+  }
+  if(overdue.length){
+    h+='<div class="dash-title">Overdue visits <span style="font-weight:400;color:var(--muted)">60+ days</span></div><div class="alert-list">';
+    h+=overdue.slice(0,15).map(a=>{ const days=a.lastContact?Math.floor((today-new Date(a.lastContact))/864e5)+' days ago':'Never'; return '<div class="alert-item overdue" onclick="openPanel('+a.id+')"><div><div class="alert-name">'+esc(a.name)+'</div><div style="font-size:11px;color:var(--muted)">'+esc(a.address.split(',').slice(-2).join(',').trim())+'</div></div><span class="alert-tag tag-overdue">'+days+'</span></div>'; }).join('');
+    h+='</div>';
+  }
+  if(noVol.length){
+    h+='<div class="dash-title">No volume data <span style="font-weight:400;color:var(--muted)">needs follow-up</span></div><div class="alert-list">';
+    h+=noVol.slice(0,15).map(a=>'<div class="alert-item no-vol" onclick="openPanel('+a.id+')"><div><div class="alert-name">'+esc(a.name)+'</div><div style="font-size:11px;color:var(--muted)">'+esc(a.address.split(',').slice(-2).join(',').trim())+'</div></div><span class="alert-tag tag-novol">No data</span></div>').join('');
+    h+='</div>';
+  }
+  h+='<div style="height:24px"></div>';
+  el.innerHTML=h;
+}
+
+// ── EXPORT ──
+function exportCSV(){
+  const cols=['id','name','type','address','status','contact','phone','email','distributorRep','lastContact','bourbon','rye','oldFashioned','q90_bourbon','q90_rye','q90_of','notes','lat','lng'];
+  const rows=accounts.map(a=>cols.map(c=>'"'+String(a[c]!=null?a[c]:'').replace(/"/g,'""')+'"').join(','));
+  const blob=new Blob([[cols.join(','),...rows].join('
+')],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const lnk=document.createElement('a'); lnk.href=url; lnk.download='barrel_route_'+new Date().toISOString().slice(0,10)+'.csv'; lnk.click(); URL.revokeObjectURL(url);
+}
+
+// ── IMPORT ──
+function openImport(){ document.getElementById('import-result').style.display='none'; document.getElementById('file-input').value=''; const ov=document.getElementById('iov'); ov.style.display='flex'; setTimeout(()=>ov.classList.add('open'),10); }
+function closeImport(){ const ov=document.getElementById('iov'); ov.classList.remove('open'); setTimeout(()=>ov.style.display='none',200); }
+const fd=document.getElementById('filedrop');
+fd.addEventListener('dragover',e=>{e.preventDefault();fd.style.borderColor='var(--bourbon)'});
+fd.addEventListener('dragleave',()=>fd.style.borderColor='');
+fd.addEventListener('drop',e=>{e.preventDefault();fd.style.borderColor='';parseImportFile(e.dataTransfer.files[0]);});
+function handleImport(e){ parseImportFile(e.target.files[0]); }
+function parseImportFile(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.trim().split(/
+?
+/);
+    if(lines.length<2){showImportResult('error','File appears empty.');return;}
+    const hdr=parseCSVRow(lines[0]).map(h=>h.trim().toLowerCase());
+    const ni=hdr.indexOf('account name');
+    const bi=hdr.findIndex(h=>h==='bourbon'||h.includes('bourbon')&&!h.includes('90'));
+    const ri=hdr.findIndex(h=>h==='rye'&&!h.includes('90'));
+    const oi=hdr.findIndex(h=>(h==='old fashioned'||h==='oldfashioned')&&!h.includes('90'));
+    const q90bi=hdr.findIndex(h=>h.includes('q90')&&h.includes('bourbon')||h==='q90_bourbon');
+    const q90ri=hdr.findIndex(h=>h.includes('q90')&&h.includes('rye')||h==='q90_rye');
+    const q90oi=hdr.findIndex(h=>h.includes('q90')&&h.includes('old')||h==='q90_of'||h==='q90_old fashioned');
+    if(ni<0){showImportResult('error','CSV must have an "Account Name" column.');return;}
+    let updated=0,skipped=0;
+    for(let i=1;i<lines.length;i++){
+      if(!lines[i].trim()) continue;
+      const row=parseCSVRow(lines[i]);
+      const acct=accounts.find(a=>a.name.toLowerCase().trim()===(row[ni]||'').toLowerCase().trim());
+      if(!acct){skipped++;continue;}
+      const setV=(idx,key)=>{ if(idx>=0&&row[idx]!==undefined&&row[idx]!==''){const v=parseInt(row[idx]);if(!isNaN(v))acct[key]=v;} };
+      setV(bi,'bourbon'); setV(ri,'rye'); setV(oi,'oldFashioned');
+      setV(q90bi,'q90_bourbon'); setV(q90ri,'q90_rye'); setV(q90oi,'q90_of');
+      updated++;
+    }
+    applyFilters();
+    showImportResult('ok','Updated '+updated+' account'+(updated!==1?'s':'')+'.'+(skipped?' '+skipped+' not matched.':''));
+  };
+  reader.readAsText(file);
+}
+function parseCSVRow(line){
+  const res=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+    else if(c===','&&!inQ){res.push(cur.trim());cur='';}
+    else cur+=c;
+  }
+  res.push(cur.trim()); return res;
+}
+function showImportResult(t,msg){ const el=document.getElementById('import-result'); el.className='import-result '+(t==='ok'?'ok':'err'); el.textContent=msg; el.style.display='block'; }
+
+// ── TAB SWITCH ──
+function switchTab(t){
+  activeTab=t;
+  ['map','list','route','dash'].forEach(x=>{
+    document.getElementById('tab-'+x).className='tab'+(t===x?' act':'');
+    document.getElementById(x+'-view').className=t===x?'':'hidden';
+  });
+  if(t==='map'){ if(!gMap) initMap(); else{ setTimeout(()=>{google.maps.event.trigger(gMap,'resize');renderMarkers();},50); } }
+  else if(t==='list') renderList();
+  else if(t==='route'){ if(gMap) initRouteMap(); renderRoutePage(); }
+  else if(t==='dash') renderDashboard();
+}
+
+function esc(s){ return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''; }
+
+// ── INIT — Google Maps loads AFTER this script via defer ──
+filtered=[...accounts];
+// initMap is called by Google Maps callback once API is ready
+</script>
+
+<!-- Google Maps loads LAST so our code is defined before callback fires -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCjui7XNUsoBbBHqKfrgt3WUED-gP4lcU0&callback=initMap&loading=async" async defer></script>
+</body>
+</html>
