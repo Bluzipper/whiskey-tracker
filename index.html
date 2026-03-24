@@ -437,7 +437,7 @@ header{height:var(--hh);background:#1A1108;display:flex;align-items:center;gap:8
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, serverTimestamp, query, orderBy, limit, addDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot, writeBatch, serverTimestamp, query, orderBy, limit, addDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── FIREBASE INIT ──
 const app = initializeApp({
@@ -689,6 +689,12 @@ function getGeocoder() {
   if (!_geocoder && typeof google !== 'undefined' && google.maps) _geocoder = new google.maps.Geocoder();
   return _geocoder;
 }
+// NM bounding box for geocoder bias
+const NM_BOUNDS = {
+  sw: { lat: 31.33, lng: -109.05 },
+  ne: { lat: 37.00, lng: -103.00 }
+};
+
 async function geocodeOne(addr) {
   if (!addr || !addr.trim()) return null;
   let waited = 0;
@@ -697,35 +703,48 @@ async function geocodeOne(addr) {
   }
   const gc = getGeocoder();
   if (!gc) return null;
-  // Convert to title case for better geocoding accuracy
-  // Clean up address formatting for better geocoding
+
+  // Clean address formatting
   const cleaned = addr.trim()
     .replace(/S[.]E[.]/g, 'SE').replace(/N[.]E[.]/g, 'NE')
     .replace(/N[.]W[.]/g, 'NW').replace(/S[.]W[.]/g, 'SW');
 
+  // Use bounds biasing — correct approach for JS Geocoder
+  const nmBounds = new google.maps.LatLngBounds(
+    new google.maps.LatLng(NM_BOUNDS.sw.lat, NM_BOUNDS.sw.lng),
+    new google.maps.LatLng(NM_BOUNDS.ne.lat, NM_BOUNDS.ne.lng)
+  );
+
   return new Promise(resolve => {
-    gc.geocode({
-      address: cleaned,
-      componentRestrictions: { country: 'US', administrativeArea: 'NM' }
-    }, (results, status) => {
+    gc.geocode({ address: cleaned, bounds: nmBounds, region: 'us' }, (results, status) => {
       if (status === 'OK' && results && results.length > 0) {
+        // Verify result is actually within or near NM
         const loc = results[0].geometry.location;
-        resolve({ lat: loc.lat(), lng: loc.lng() });
-      } else {
-        // Retry without state restriction as fallback
-        gc.geocode({ address: cleaned }, (r2, s2) => {
-          if (s2 === 'OK' && r2 && r2.length > 0) {
-            resolve({ lat: r2[0].geometry.location.lat(), lng: r2[0].geometry.location.lng() });
-          } else resolve(null);
-        });
-      }
+        const lat = loc.lat(), lng = loc.lng();
+        // Accept if within NM bounds with some padding
+        if (lat >= 30.5 && lat <= 37.5 && lng >= -110 && lng <= -102.5) {
+          resolve({ lat, lng });
+        } else {
+          // Result was outside NM — try with explicit NM in address
+          const withState = cleaned.includes('NM') ? cleaned : cleaned + ', NM';
+          gc.geocode({ address: withState, bounds: nmBounds, region: 'us' }, (r2, s2) => {
+            if (s2 === 'OK' && r2 && r2.length > 0) {
+              resolve({ lat: r2[0].geometry.location.lat(), lng: r2[0].geometry.location.lng() });
+            } else resolve(null);
+          });
+        }
+      } else resolve(null);
     });
   });
 }
 
 async function geocodeAll() {
-  const need = A.filter(a => !a.lat || !a.lng || (Math.abs(a.lat - 34.5) < 0.01 && Math.abs(a.lng + 106.5) < 0.01));
-  if (!need.length) { console.log('All accounts already geocoded'); return; }
+  // Force re-geocode if any account has suspicious coordinates
+  // (center of NM default OR suspiciously wrong location)
+  const need = A.filter(a => !a.lat || !a.lng ||
+    (Math.abs(a.lat - 34.5) < 0.1 && Math.abs(a.lng + 106.5) < 0.1));
+  if (!need.length) { console.log('All accounts geocoded, count:', A.length); return; }
+  console.log('Need to geocode', need.length, 'accounts');
   if (!getGeocoder()) { console.warn('Geocoder not ready'); return; }
   console.log('Geocoding', need.length, 'accounts...');
   document.getElementById('geobar').classList.add('on');
@@ -1159,6 +1178,12 @@ function renderDash(){
   if(upcomingFU.length){el.appendChild(dtitle('Upcoming follow-ups (next 90 days)'));el.appendChild(alertList(upcomingFU,'nv',a=>{const txt=a._days===0?'Today':a._days===1?'Tomorrow':'In '+a._days+' days';return{cls:a._days<=7?'tov':'tnv',txt};}));}
   if(overdue.length){el.appendChild(dtitle('Overdue visits (60+ days)'));el.appendChild(alertList(overdue.slice(0,15),'ov',a=>{const days=a.lastContact?Math.floor((today-new Date(a.lastContact))/864e5)+' days ago':'Never';return{cls:'tov',txt:days};}));}
   if(noVol.length){el.appendChild(dtitle('No volume data'));el.appendChild(alertList(noVol.slice(0,15),'nv',()=>({cls:'tnv',txt:'No data'})));}
+  // Force re-geocode button
+  const rgBtn = document.createElement('button');
+  rgBtn.style.cssText = 'display:block;width:100%;padding:11px;background:var(--bg);color:var(--mu);font-family:DM Sans,sans-serif;font-size:13px;font-weight:500;border:1px solid var(--bdr);border-radius:var(--r);cursor:pointer;margin-bottom:8px;text-align:center';
+  rgBtn.textContent = '↺ Re-geocode all account locations';
+  rgBtn.addEventListener('click', () => window.forceReGeocode && window.forceReGeocode());
+  el.appendChild(rgBtn);
   const spacer=document.createElement('div');spacer.style.height='24px';el.appendChild(spacer);
 }
 
@@ -1245,6 +1270,23 @@ function showToast(msg, duration){
 function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'';} 
 
 // ── EXPOSE GLOBALS NEEDED BY MAPS / EXTERNAL CALLBACKS ──
+window.forceReGeocode = async function() {
+  if (!confirm('This will re-geocode all 169 accounts from scratch. Continue?')) return;
+  showToast('Clearing coordinates…');
+  // Reset all accounts to no coordinates
+  const batch = writeBatch(db);
+  A.forEach(a => {
+    if (a._docId) {
+      const ref = doc(db, 'accounts', a._docId);
+      batch.set(ref, { lat: 34.5, lng: -106.5 }, { merge: true });
+    }
+  });
+  await batch.commit();
+  // Clear local coords
+  A.forEach(a => { a.lat = 34.5; a.lng = -106.5; });
+  showToast('Re-geocoding all accounts…');
+  await geocodeAll();
+};
 window.switchTab = switchTab;
 window.showToast = showToast;
 
