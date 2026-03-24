@@ -496,9 +496,11 @@ document.getElementById('l-pass').addEventListener('keydown', e => { if (e.key =
 document.getElementById('btn-signout').addEventListener('click', () => signOut(auth));
 
 onAuthStateChanged(auth, async user => {
+  console.log('Auth state changed:', user ? 'signed in as ' + user.email : 'signed out');
   if (user) {
     currentUser = user;
     document.getElementById('login-screen').classList.add('hidden');
+    console.log('Starting Firestore listener...');
     startListening();
   } else {
     currentUser = null;
@@ -512,10 +514,21 @@ onAuthStateChanged(auth, async user => {
 function startListening() {
   setSyncStatus('syncing');
   showToast('Connecting to database…');
-  const ref = collection(db, 'accounts');
+  console.log('Firestore: opening onSnapshot listener on accounts collection');
+  let ref;
+  try {
+    ref = collection(db, 'accounts');
+    console.log('Firestore: collection ref created OK');
+  } catch(e) {
+    console.error('Firestore: failed to create collection ref:', e);
+    showDbError('init-failed', e.message);
+    return;
+  }
   unsubAccounts = onSnapshot(ref, snapshot => {
+    console.log('Firestore snapshot received, empty:', snapshot.empty, 'size:', snapshot.size);
     if (snapshot.empty) {
       // First time — seed from RAW data
+      console.log('Firestore: empty collection, seeding...');
       seedDatabase();
       return;
     }
@@ -528,19 +541,32 @@ function startListening() {
     filt = [...A];
     setSyncStatus('live');
     showToast('✓ ' + A.length + ' accounts loaded');
-    applyFilters();
-    if (activeTab === 'dash') renderDash();
-    // Init map now that we have data
-    if (activeTab === 'map' && !gMap) initMap();
+    // Always render current tab — don't depend on map being ready
+    if (activeTab === 'map') {
+      // Try to init map, but show list as fallback
+      if (typeof google !== 'undefined' && google.maps) {
+        initMap();
+      } else {
+        // Map API not ready yet — switch to list so user sees their data
+        switchTab('list');
+      }
+    } else if (activeTab === 'list') {
+      renderList();
+    } else if (activeTab === 'dash') {
+      renderDash();
+    } else if (activeTab === 'route') {
+      renderRoute();
+    }
   }, err => {
-    console.error('Firestore error:', err);
+    console.error('Firestore onSnapshot error - code:', err.code, 'message:', err.message, 'full:', err);
     setSyncStatus('error');
-    // Show specific error message to help diagnose
     let msg = '⚠ Database error: ' + err.code;
     if (err.code === 'permission-denied') {
-      msg = '⚠ Permission denied — update Firestore security rules (see instructions)';
+      msg = '⚠ Permission denied — update Firestore security rules';
     } else if (err.code === 'unavailable') {
       msg = '⚠ Database offline — check internet connection';
+    } else if (err.code === 'failed-precondition') {
+      msg = '⚠ Firestore index needed — check Firebase console';
     }
     showToast(msg, 8000);
     showDbError(err.code, err.message);
@@ -708,9 +734,11 @@ async function initMap() {
       streetViewControl: false, fullscreenControl: false,
       styles: [{ featureType:'poi', elementType:'labels', stylers:[{visibility:'off'}] }, { featureType:'transit', stylers:[{visibility:'off'}] }]
     });
-    await geocodeAll();
-    renderMarkers();
     document.getElementById('map-err').classList.remove('on');
+    // Render existing markers immediately (with whatever coords we have)
+    renderMarkers();
+    // Geocode missing ones in the background
+    geocodeAll().then(() => renderMarkers());
   } catch(err) { showMapErr('Map failed: ' + err.message); }
 }
 
@@ -1125,7 +1153,15 @@ function switchTab(t){
   document.getElementById('lv').className='view'+(t==='list'?'':' off');
   document.getElementById('rv').className='view'+(t==='route'?'':' off');
   document.getElementById('dv').className='view'+(t==='dash'?'':' off');
-  if(t==='map'){if(!gMap)initMap();else{setTimeout(()=>{google.maps.event.trigger(gMap,'resize');renderMarkers();},50);}}
+  if(t==='map'){
+    if(typeof google !== 'undefined' && google.maps){
+      if(!gMap) initMap();
+      else{ setTimeout(()=>{google.maps.event.trigger(gMap,'resize');renderMarkers();},50); }
+    } else {
+      // Maps API not loaded yet — show error
+      showMapErr('Google Maps API not loaded. Check your Maps JS API key domain restrictions in Google Cloud Console.');
+    }
+  }
   else if(t==='list')renderList();
   else if(t==='route'){if(gMap)initRMap();renderRoute();}
   else if(t==='dash')renderDash();
