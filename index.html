@@ -337,6 +337,7 @@ header{height:var(--hh);background:#1A1108;display:flex;align-items:center;gap:8
     </div>
     <div class="psec"><div class="stit">Annual Volume (cases/yr)</div><div class="vbars" id="p-vols"></div></div>
     <div class="psec"><div class="stit">Last 90 Days</div><div id="p-q90"></div></div>
+    <div class="psec" id="p-fu-sec"><div class="stit">Follow-up</div><div id="p-fu"></div></div>
     <div class="psec"><div class="stit">Notes</div><div id="p-nt"></div></div>
     <div class="panact"><button class="ebtn" id="p-edit">Edit account</button><button class="rbtn" id="p-route">+ Add to route</button></div>
   </div>
@@ -370,6 +371,10 @@ header{height:var(--hh);background:#1A1108;display:flex;align-items:center;gap:8
         <div class="fld"><label>Rye</label><input id="f-q90r" type="number" min="0"></div>
         <div class="fld"><label>Old Fashioned</label><input id="f-q90o" type="number" min="0"></div>
       </div>
+    </div>
+    <div class="fsec"><div class="flbl">Follow-up</div>
+      <div class="fld"><label>Follow-up date</label><input id="f-fud" type="date"></div>
+      <div class="fld"><label>Follow-up notes</label><input id="f-fun" type="text" placeholder="e.g. Menu redesign — reach out closer to launch"></div>
     </div>
     <div class="fsec"><div class="flbl">Notes</div>
       <div class="fld"><label>Internal notes</label><textarea id="f-nt" placeholder="Add notes, follow-ups, preferences&hellip;"></textarea></div>
@@ -414,7 +419,7 @@ function loadAccounts() {
 
 let A = loadAccounts();
 // Ensure q90 fields exist on all accounts
-A.forEach(a => { ['q90_bourbon','q90_rye','q90_of'].forEach(k => { if (a[k] === undefined) a[k] = 0; }); });
+A.forEach(a => { ['q90_bourbon','q90_rye','q90_of'].forEach(k => { if (a[k] === undefined) a[k] = 0; }); if (a.followUpDate === undefined) a.followUpDate = ''; if (a.followUpNotes === undefined) a.followUpNotes = ''; });
 let nextId = Math.max(...A.map(a => a.id)) + 1;
 let filt = [...A], activeF = 'all', activeTab = 'map';
 let curId = null, editId = null, editSt = 'current';
@@ -689,6 +694,29 @@ function openPanel(id) {
     grid.appendChild(cell);
   });
   q90el.appendChild(grid);
+  // Follow-up section
+  const fuSec = document.getElementById('p-fu-sec');
+  const fuEl = document.getElementById('p-fu');
+  fuEl.innerHTML = '';
+  if (a.followUpDate) {
+    const fuDate = new Date(a.followUpDate + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const daysUntil = Math.round((fuDate - today) / 864e5);
+    const isOverdue = daysUntil < 0;
+    const isSoon = daysUntil >= 0 && daysUntil <= 7;
+    const color = isOverdue ? '#A32D2D' : isSoon ? '#B5640A' : '#0C6B3C';
+    const bg = isOverdue ? '#FCEAEA' : isSoon ? '#FFF0DC' : '#E6FBF0';
+    const label = isOverdue ? Math.abs(daysUntil) + ' days overdue' : daysUntil === 0 ? 'Today!' : 'In ' + daysUntil + ' day' + (daysUntil === 1 ? '' : 's');
+    fuEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+      + '<div style="font-size:14px;font-weight:500">' + a.followUpDate + '</div>'
+      + '<span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;background:' + bg + ';color:' + color + '">' + label + '</span>'
+      + '</div>'
+      + (a.followUpNotes ? '<div style="font-size:13px;color:var(--mu);line-height:1.5">' + esc(a.followUpNotes) + '</div>' : '');
+    fuSec.style.display = 'block';
+  } else {
+    fuSec.style.display = 'none';
+  }
+
   const nt = document.getElementById('p-nt'); nt.innerHTML = '';
   if (a.notes && a.notes.trim()) { const d = document.createElement('div'); d.className = 'narea'; d.textContent = a.notes; nt.appendChild(d); }
   else { const d = document.createElement('div'); d.className = 'nemp'; d.textContent = 'No notes yet.'; nt.appendChild(d); }
@@ -706,13 +734,15 @@ function openEdit(id) {
   document.getElementById('f-rp').value = a.distributorRep || ''; document.getElementById('f-lc').value = a.lastContact || '';
   document.getElementById('f-b').value = a.bourbon || ''; document.getElementById('f-r').value = a.rye || ''; document.getElementById('f-o').value = a.oldFashioned || '';
   document.getElementById('f-q90b').value = a.q90_bourbon || ''; document.getElementById('f-q90r').value = a.q90_rye || ''; document.getElementById('f-q90o').value = a.q90_of || '';
+  document.getElementById('f-fud').value = a.followUpDate || '';
+  document.getElementById('f-fun').value = a.followUpNotes || '';
   document.getElementById('f-nt').value = a.notes || '';
   setSt(a.status);
   const eov = document.getElementById('eov'); eov.style.display = 'flex'; setTimeout(() => eov.classList.add('on'), 10);
 }
 function openAdd() {
   editId = null; document.getElementById('etit').textContent = 'Add account';
-  ['f-nm','f-ad','f-ct','f-ph','f-em','f-rp','f-lc','f-b','f-r','f-o','f-q90b','f-q90r','f-q90o','f-nt'].forEach(i => document.getElementById(i).value = '');
+  ['f-nm','f-ad','f-ct','f-ph','f-em','f-rp','f-lc','f-b','f-r','f-o','f-q90b','f-q90r','f-q90o','f-fud','f-fun','f-nt'].forEach(i => document.getElementById(i).value = '');
   document.getElementById('f-ty').value = 'ON'; setSt('current');
   const eov = document.getElementById('eov'); eov.style.display = 'flex'; setTimeout(() => eov.classList.add('on'), 10);
 }
@@ -724,7 +754,7 @@ function setSt(s) {
 }
 async function saveEdit() {
   const nm = document.getElementById('f-nm').value.trim(); if (!nm) { alert('Account name required.'); return; }
-  const d = { name: nm, address: document.getElementById('f-ad').value.trim(), type: document.getElementById('f-ty').value, status: editSt, contact: document.getElementById('f-ct').value.trim(), phone: document.getElementById('f-ph').value.trim(), email: document.getElementById('f-em').value.trim(), distributorRep: document.getElementById('f-rp').value.trim(), lastContact: document.getElementById('f-lc').value, bourbon: parseInt(document.getElementById('f-b').value) || 0, rye: parseInt(document.getElementById('f-r').value) || 0, oldFashioned: parseInt(document.getElementById('f-o').value) || 0, q90_bourbon: parseInt(document.getElementById('f-q90b').value) || 0, q90_rye: parseInt(document.getElementById('f-q90r').value) || 0, q90_of: parseInt(document.getElementById('f-q90o').value) || 0, notes: document.getElementById('f-nt').value.trim() };
+  const d = { name: nm, address: document.getElementById('f-ad').value.trim(), type: document.getElementById('f-ty').value, status: editSt, contact: document.getElementById('f-ct').value.trim(), phone: document.getElementById('f-ph').value.trim(), email: document.getElementById('f-em').value.trim(), distributorRep: document.getElementById('f-rp').value.trim(), lastContact: document.getElementById('f-lc').value, bourbon: parseInt(document.getElementById('f-b').value) || 0, rye: parseInt(document.getElementById('f-r').value) || 0, oldFashioned: parseInt(document.getElementById('f-o').value) || 0, q90_bourbon: parseInt(document.getElementById('f-q90b').value) || 0, q90_rye: parseInt(document.getElementById('f-q90r').value) || 0, q90_of: parseInt(document.getElementById('f-q90o').value) || 0, followUpDate: document.getElementById('f-fud').value, followUpNotes: document.getElementById('f-fun').value.trim(), notes: document.getElementById('f-nt').value.trim() };
   if (editId) {
     const i = A.findIndex(x => x.id === editId);
     const addrChanged = A[i].address !== d.address;
@@ -889,6 +919,15 @@ function renderDash() {
   const dropped = A.filter(a => { const q = a.q90_bourbon+a.q90_rye+a.q90_of, ann = a.bourbon+a.rye+a.oldFashioned; return ann && q && q < Math.round(ann/4)*0.8; });
 
   function dtitle(t) { const d = document.createElement('div'); d.className = 'dtitle'; d.textContent = t; return d; }
+
+  // Notification permission button
+  if ('Notification' in window && Notification.permission !== 'granted') {
+    const nb = document.createElement('button');
+    nb.style.cssText = 'display:block;width:100%;padding:11px;background:var(--on-l);color:var(--on);font-family:DM Sans,sans-serif;font-size:13px;font-weight:500;border:1px solid var(--on);border-radius:var(--r);cursor:pointer;margin-bottom:12px;text-align:center';
+    nb.textContent = Notification.permission === 'denied' ? '\u{1F514} Follow-up alerts blocked — enable in phone settings' : '\u{1F514} Enable follow-up notifications';
+    if (Notification.permission !== 'denied') nb.addEventListener('click', initNotifications);
+    el.appendChild(nb);
+  }
   function kgrid(...cards) { const g = document.createElement('div'); g.className = 'kgrid'; cards.forEach(c => g.appendChild(c)); return g; }
   function kcard(lbl, val, sub, cls) { const c = document.createElement('div'); c.className = 'kcard' + (cls ? ' ' + cls : ''); c.innerHTML = '<div class="klbl">' + lbl + '</div><div class="kval">' + val + '</div><div class="ksub">' + sub + '</div>'; return c; }
 
@@ -946,12 +985,38 @@ function renderDash() {
   if (dropped.length) { el.appendChild(dtitle('Volume drops (>20% below avg)')); el.appendChild(alertList(dropped, 'ov', a => { const q=a.q90_bourbon+a.q90_rye+a.q90_of, exp=Math.round((a.bourbon+a.rye+a.oldFashioned)/4), pct=Math.round((q-exp)/exp*100); return { cls:'tov', txt:pct+'%' }; })); }
   if (overdue.length) { el.appendChild(dtitle('Overdue visits (60+ days)')); el.appendChild(alertList(overdue.slice(0,15), 'ov', a => { const days=a.lastContact?Math.floor((today-new Date(a.lastContact))/864e5)+' days ago':'Never'; return { cls:'tov', txt:days }; })); }
   if (noVol.length) { el.appendChild(dtitle('No volume data')); el.appendChild(alertList(noVol.slice(0,15), 'nv', () => ({ cls:'tnv', txt:'No data' }))); }
+
+  // ── PROSPECT FOLLOW-UPS ──
+  const now = new Date(); now.setHours(0,0,0,0);
+  const in90 = new Date(now.getTime() + 90 * 864e5);
+  const followUps = A.filter(a => a.followUpDate).map(a => {
+    const d = new Date(a.followUpDate + 'T00:00:00');
+    const days = Math.round((d - now) / 864e5);
+    return { ...a, _days: days };
+  }).filter(a => a._days <= 90).sort((a, b) => a._days - b._days);
+
+  const overdueFU = followUps.filter(a => a._days < 0);
+  const upcomingFU = followUps.filter(a => a._days >= 0);
+
+  if (overdueFU.length) {
+    el.appendChild(dtitle('Overdue follow-ups'));
+    el.appendChild(alertList(overdueFU, 'ov', a => ({ cls:'tov', txt: Math.abs(a._days) + 'd overdue' })));
+  }
+  if (upcomingFU.length) {
+    el.appendChild(dtitle('Upcoming follow-ups (next 90 days)'));
+    el.appendChild(alertList(upcomingFU, 'nv', a => {
+      const txt = a._days === 0 ? 'Today' : a._days === 1 ? 'Tomorrow' : 'In ' + a._days + ' days';
+      const cls = a._days <= 7 ? 'tov' : 'tnv';
+      return { cls, txt };
+    }));
+  }
+
   const spacer = document.createElement('div'); spacer.style.height = '24px'; el.appendChild(spacer);
 }
 
 // ── EXPORT ──
 function exportCSV() {
-  const cols = ['id','name','type','address','status','contact','phone','email','distributorRep','lastContact','bourbon','rye','oldFashioned','q90_bourbon','q90_rye','q90_of','notes','lat','lng'];
+  const cols = ['id','name','type','address','status','contact','phone','email','distributorRep','lastContact','bourbon','rye','oldFashioned','q90_bourbon','q90_rye','q90_of','followUpDate','followUpNotes','notes','lat','lng'];
   const rows = A.map(a => cols.map(c => '"' + String(a[c] != null ? a[c] : '').replace(/"/g, '""') + '"').join(','));
   const csv = [cols.join(','), ...rows].join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
@@ -1086,6 +1151,60 @@ document.getElementById('leg-toggle').addEventListener('click', () => {
   arrow.innerHTML = collapsed ? '&#x25BC;' : '&#x25B2;';
 });
 
+// ── PUSH NOTIFICATIONS (Follow-up alerts) ──
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  const perm = await Notification.requestPermission();
+  return perm === 'granted';
+}
+
+function checkFollowUpNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in7 = new Date(today.getTime() + 7 * 864e5);
+  const due = A.filter(a => {
+    if (!a.followUpDate) return false;
+    const d = new Date(a.followUpDate + 'T00:00:00');
+    return d >= today && d <= in7;
+  });
+  const overdue = A.filter(a => {
+    if (!a.followUpDate) return false;
+    const d = new Date(a.followUpDate + 'T00:00:00');
+    return d < today;
+  });
+  const all = [...overdue, ...due];
+  if (!all.length) return;
+  // Only notify once per day
+  const lastNotif = localStorage.getItem('tg-last-notif');
+  const todayStr = today.toISOString().slice(0,10);
+  if (lastNotif === todayStr) return;
+  localStorage.setItem('tg-last-notif', todayStr);
+  if (all.length === 1) {
+    const a = all[0];
+    const d = new Date(a.followUpDate + 'T00:00:00');
+    const days = Math.round((d - today) / 864e5);
+    const when = days < 0 ? Math.abs(days) + ' days overdue' : days === 0 ? 'today' : 'in ' + days + ' days';
+    new Notification('Taylor Garrett — Follow-up due', {
+      body: a.name + ': ' + when + (a.followUpNotes ? '\n' + a.followUpNotes : ''),
+      icon: 'data:image/png;base64,',
+      tag: 'tg-followup'
+    });
+  } else {
+    new Notification('Taylor Garrett — ' + all.length + ' follow-ups due', {
+      body: all.slice(0,3).map(a => a.name).join(', ') + (all.length > 3 ? ' +' + (all.length-3) + ' more' : ''),
+      icon: 'data:image/png;base64,',
+      tag: 'tg-followup'
+    });
+  }
+}
+
+async function initNotifications() {
+  const granted = await requestNotificationPermission();
+  if (granted) checkFollowUpNotifications();
+}
+
 // ── SERVICE WORKER ──
 if ('serviceWorker' in navigator) {
   const swCode = `const CACHE = 'tg-whiskey-v1';
@@ -1154,6 +1273,23 @@ self.addEventListener('fetch', e => {
   // Also mark export time whenever user manually hits Export
   const origExport = exportCSV;
   window.exportCSV = function() { origExport(); markChecked(); localStorage.removeItem(SNOOZE_KEY); };
+})();
+
+// ── NOTIFICATION PROMPT ──
+// Ask for notification permission after 2 seconds on first visit
+(function() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    const asked = localStorage.getItem('tg-notif-asked');
+    if (!asked) {
+      setTimeout(() => {
+        localStorage.setItem('tg-notif-asked', '1');
+        initNotifications();
+      }, 2000);
+    }
+  } else if (Notification.permission === 'granted') {
+    setTimeout(checkFollowUpNotifications, 1000);
+  }
 })();
 
 // ── PWA INSTALL TIP ──
