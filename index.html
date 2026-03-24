@@ -290,11 +290,13 @@ header{height:var(--hh);background:#1A1108;display:flex;align-items:center;gap:8
   </div>
   <button class="hbtn" id="btn-import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import</button>
   <button class="hbtn" id="btn-export"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
-  <button class="hbtn" id="btn-signout" style="color:rgba(232,168,74,.6)">Out</button>
-  <button class="hbtn" id="btn-pw" style="color:rgba(232,168,74,.6)" title="Change password">&#x1F512;</button>
+  <button class="hbtn" id="btn-signout" style="color:rgba(232,168,74,.6)">Sign out</button>
 </header>
 <div class="toolbar">
-  <div class="sw"><span class="si">&#x2315;</span><input type="text" id="search" placeholder="Search accounts, cities, reps&hellip;"></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+    <div class="sw" style="margin-bottom:0;flex:1"><span class="si">&#x2315;</span><input type="text" id="search" placeholder="Search accounts, cities, reps&hellip;"></div>
+    <button id="btn-pw" title="Change password" style="flex-shrink:0;height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--bdr);background:var(--bg);font-size:15px;cursor:pointer;color:var(--mu)">&#x1F512;</button>
+  </div>
   <div class="filters">
     <button class="pill act" id="pill-all">All</button>
     <button class="pill" id="pill-on">On-Premise</button>
