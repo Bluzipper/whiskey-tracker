@@ -511,91 +511,107 @@ onAuthStateChanged(auth, async user => {
 });
 
 // ── REAL-TIME LISTENER ──
-function startListening() {
+async function startListening() {
   setSyncStatus('syncing');
-  showToast('Connecting to database…');
-  console.log('Firestore: opening onSnapshot listener on accounts collection');
-  let ref;
+  showToast('Connecting…');
+
+  // ── Step 1: Check/create the meta lock document ──
+  const metaRef = doc(db, 'meta', 'status');
+  let metaSnap;
   try {
-    ref = collection(db, 'accounts');
-    console.log('Firestore: collection ref created OK');
+    const { getDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    metaSnap = await getDoc(metaRef);
   } catch(e) {
-    console.error('Firestore: failed to create collection ref:', e);
-    showDbError('init-failed', e.message);
+    console.error('Meta read failed:', e);
+    showDbError(e.code, e.message);
     return;
   }
+
+  const isSeeded = metaSnap.exists() && metaSnap.data().seeded === true;
+  console.log('DB seeded:', isSeeded);
+
+  if (!isSeeded) {
+    // ── Step 2: Wipe and reseed cleanly ──
+    await nukeAndReseed(metaRef);
+  }
+
+  // ── Step 3: Start real-time listener ──
+  const ref = collection(db, 'accounts');
   unsubAccounts = onSnapshot(ref, snapshot => {
-    console.log('Firestore snapshot received, empty:', snapshot.empty, 'size:', snapshot.size);
-    if (snapshot.empty) {
-      if (window._seeding) { console.log('Already seeding, skipping...'); return; }
-      window._seeding = true;
-      console.log('Firestore: empty collection, seeding...');
-      seedDatabase();
-      return;
-    }
-    let rawDocs = snapshot.docs.map(d => ({ ...d.data(), _docId: d.id }));
-    rawDocs.forEach(a => {
+    // Only process if count looks sane (skip during wipe/reseed)
+    if (window._reseeding) return;
+
+    const docs = snapshot.docs.map(d => ({ ...d.data(), _docId: d.id }));
+    docs.forEach(a => {
       ['q90_bourbon','q90_rye','q90_of'].forEach(k => { if (a[k] === undefined) a[k] = 0; });
       if (!a.followUpDate) a.followUpDate = '';
       if (!a.followUpNotes) a.followUpNotes = '';
     });
-    // Deduplicate by name, keeping best coords
-    const seen = new Map();
-    const toDelete = [];
-    rawDocs.forEach(a => {
-      const key = (a.name || '').toLowerCase().trim();
-      if (!seen.has(key)) {
-        seen.set(key, a);
-      } else {
-        const existing = seen.get(key);
-        const aReal = a.lat && !(Math.abs(a.lat - 34.5) < 0.01);
-        const exReal = existing.lat && !(Math.abs(existing.lat - 34.5) < 0.01);
-        if (aReal && !exReal) {
-          toDelete.push(existing._docId);
-          seen.set(key, a);
-        } else {
-          toDelete.push(a._docId);
-        }
-      }
-    });
-    // Delete duplicates in background
-    if (toDelete.length > 0) {
-      console.log('Deleting', toDelete.length, 'duplicate documents...');
-      showToast('Removing ' + toDelete.length + ' duplicates…');
-      Promise.all(toDelete.map(id => deleteDoc(doc(db, 'accounts', id))))
-        .then(() => showToast('✓ Cleaned up ' + toDelete.length + ' duplicate accounts'))
-        .catch(e => console.warn('Cleanup error:', e));
-    }
-    A = Array.from(seen.values());
+    A = docs;
     filt = [...A];
     setSyncStatus('live');
     showToast('✓ ' + A.length + ' accounts loaded');
-    // Render current tab
     if (activeTab === 'map') {
-      if (typeof google !== 'undefined' && google.maps) {
-        if (!gMap) initMap(); else renderMarkers();
-      }
-    } else if (activeTab === 'list') {
-      renderList();
-    } else if (activeTab === 'dash') {
-      renderDash();
-    } else if (activeTab === 'route') {
-      renderRoute();
-    }
+      if (typeof google !== 'undefined' && google.maps) { if (!gMap) initMap(); else renderMarkers(); }
+    } else if (activeTab === 'list') renderList();
+    else if (activeTab === 'dash') renderDash();
+    else if (activeTab === 'route') renderRoute();
   }, err => {
-    console.error('Firestore onSnapshot error - code:', err.code, 'message:', err.message, 'full:', err);
+    console.error('Snapshot error:', err.code, err.message);
     setSyncStatus('error');
-    let msg = '⚠ Database error: ' + err.code;
-    if (err.code === 'permission-denied') {
-      msg = '⚠ Permission denied — update Firestore security rules';
-    } else if (err.code === 'unavailable') {
-      msg = '⚠ Database offline — check internet connection';
-    } else if (err.code === 'failed-precondition') {
-      msg = '⚠ Firestore index needed — check Firebase console';
-    }
-    showToast(msg, 8000);
+    showToast('⚠ ' + (err.code === 'permission-denied' ? 'Permission denied — check Firestore rules' : 'DB error: ' + err.code), 8000);
     showDbError(err.code, err.message);
   });
+}
+
+async function nukeAndReseed(metaRef) {
+  window._reseeding = true;
+  showToast('Setting up database…');
+  console.log('Nuking and reseeding...');
+
+  try {
+    // Delete all existing account documents in batches of 500
+    const { getDocs: gd } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const existing = await gd(collection(db, 'accounts'));
+    console.log('Deleting', existing.docs.length, 'existing docs...');
+
+    // Delete in batches of 400
+    for (let i = 0; i < existing.docs.length; i += 400) {
+      const batch = writeBatch(db);
+      existing.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+    console.log('All existing docs deleted');
+
+    // Write fresh seed data in batches of 400
+    for (let i = 0; i < RAW.length; i += 400) {
+      const batch = writeBatch(db);
+      RAW.slice(i, i + 400).forEach(a => {
+        const ref2 = doc(collection(db, 'accounts'));
+        batch.set(ref2, {
+          ...a,
+          q90_bourbon: a.q90_bourbon || 0,
+          q90_rye: a.q90_rye || 0,
+          q90_of: a.q90_of || 0,
+          followUpDate: a.followUpDate || '',
+          followUpNotes: a.followUpNotes || '',
+          createdAt: serverTimestamp(),
+          createdBy: currentUser ? currentUser.email : 'system'
+        });
+      });
+      await batch.commit();
+    }
+    console.log('Seeded', RAW.length, 'accounts');
+
+    // Mark as seeded so this never runs again
+    await setDoc(metaRef, { seeded: true, seededAt: serverTimestamp(), seededBy: currentUser ? currentUser.email : 'system', count: RAW.length });
+    showToast('✓ Database ready — ' + RAW.length + ' accounts');
+  } catch(e) {
+    console.error('Reseed error:', e);
+    showDbError(e.code, e.message);
+  } finally {
+    window._reseeding = false;
+  }
 }
 
 function showDbError(code, message) {
