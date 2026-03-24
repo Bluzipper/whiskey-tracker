@@ -718,12 +718,16 @@ function mkIcon(a, num) {
 
 // ── GOOGLE MAPS ──
 function showMapErr(msg) { document.getElementById('map-err-msg').textContent = msg; document.getElementById('map-err').classList.add('on'); }
-window.gm_authFailure = () => showMapErr('API key error — check Maps JS key domain restrictions.');
-
-// Expose initMap globally so Google Maps callback can find it
-window.initMap = async function initMapGlobal() {
+// Set up real initMap and drain any queued calls from the stub
+window._realInitMap = async function() {
   await initMap();
 };
+window._showMapErr = showMapErr;
+// Drain queue if Maps API already fired before module was ready
+if (window._mapInitQueue && window._mapInitQueue.length > 0) {
+  window._mapInitQueue = [];
+  window._realInitMap();
+}
 
 async function initMap() {
   if (gMap) return;
@@ -1225,6 +1229,30 @@ document.getElementById('btn-opt').addEventListener('click',optimizeRoute);
 document.getElementById('btn-gmaps').addEventListener('click',openGMaps);
 document.getElementById('btn-clr').addEventListener('click',clearRoute);
 document.getElementById('rsearch').addEventListener('input',routeSearch);
+</script>
+
+<!-- Stub initMap before Maps API loads to avoid timing race -->
+<script>
+// This runs synchronously before both the module and Maps API
+// Maps API callback will call this stub, which calls the real initMap
+// once the module has set it up
+window._mapInitQueue = [];
+window.initMap = function() {
+  // If module already set up the real initMap, call it directly
+  if (window._realInitMap) {
+    window._realInitMap();
+  } else {
+    // Otherwise queue it — module will drain when ready
+    window._mapInitQueue.push('init');
+  }
+};
+window.gm_authFailure = function() {
+  if (window._showMapErr) {
+    window._showMapErr('API key error — check Maps JS key domain restrictions in Google Cloud Console.');
+  } else {
+    console.error('Google Maps auth failure');
+  }
+};
 </script>
 
 <!-- Google Maps loads last -->
