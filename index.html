@@ -330,10 +330,10 @@ header{height:var(--hh);background:#1A1108;display:flex;align-items:center;gap:8
         <div class="leg-r" style="margin-top:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#185FA5"/></svg>On-premise</div>
         <div class="leg-r"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#B5640A"/></svg>Off-premise</div>
         <div class="leg-sec">Prospects</div>
-        <div class="leg-r"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#D4EDDA" stroke="#1A6B4A" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#1A6B4A"/></svg>&le;30 days</div>
-        <div class="leg-r"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#FFF3CD" stroke="#B8860B" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#B8860B"/></svg>31&ndash;60 days</div>
-        <div class="leg-r"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#FCEAEA" stroke="#A32D2D" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#A32D2D"/></svg>61+ days</div>
-        <div class="leg-r"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#E0E0DC" stroke="#9A9A94" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#9A9A94"/></svg>No date</div>
+        <div class="leg-r"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#D4EDDA" stroke="#1A6B4A" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#1A6B4A"/></svg>Interested</div>
+        <div class="leg-r"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#FFF3CD" stroke="#B8860B" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#B8860B"/></svg>Warm</div>
+        <div class="leg-r"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#FCEAEA" stroke="#A32D2D" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#A32D2D"/></svg>Not Interested</div>
+        <div class="leg-r"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#E0E0DC" stroke="#9A9A94" stroke-width="1.5" stroke-dasharray="3,1.5"/><circle cx="7" cy="7" r="2" fill="#9A9A94"/></svg>Not set</div>
       </div>
     </div>
   </div>
@@ -397,6 +397,13 @@ header{height:var(--hh);background:#1A1108;display:flex;align-items:center;gap:8
       <div class="fld"><label>Address</label><input id="f-ad" type="text"></div>
       <div class="fld"><label>Type</label><select id="f-ty"><option value="ON">On-Premise</option><option value="OFF">Off-Premise</option></select></div>
       <div class="fld"><label>Status</label><div class="srow"><button class="sopt sc" id="opt-cur">Current</button><button class="sopt" id="opt-pro">Prospect</button></div></div>
+      <div class="fld" id="interest-field" style="display:none"><label>Interest level</label>
+        <div class="srow">
+          <button class="sopt" id="int-interested" style="background:#D4EDDA;color:#1A6B4A;font-size:12px">Interested</button>
+          <button class="sopt" id="int-warm" style="font-size:12px">Warm</button>
+          <button class="sopt" id="int-not" style="font-size:12px">Not Interested</button>
+        </div>
+      </div>
     </div>
     <div class="fsec"><div class="flbl">Contact details</div>
       <div class="fld"><label>Point of contact</label><input id="f-ct" type="text"></div>
@@ -500,7 +507,7 @@ const RAW = [{"id":1,"name":"BIRD OF PARADISE-OFF PREM","type":"OFF","address":"
 
 // ── STATE ──
 let A = [], filt = [], activeF = 'all', activeTab = 'map';
-let curId = null, editId = null, editSt = 'current';
+let curId = null, editId = null, editSt = 'current', editInterest = '';
 let gMap = null, rMap = null, markers = [], rStops = [], rMarkers = [], rPoly = null;
 let currentUser = null, unsubAccounts = null;
 let nextLocalId = 9000; // local IDs for unsaved (fallback)
@@ -839,11 +846,10 @@ async function geocodeAll() {
 
 // ── PIN COLORS ──
 function prospectColor(a) {
-  if (!a.lastContact) return { fill: '#E0E0DC', stroke: '#9A9A94' };
-  const days = Math.floor((Date.now() - new Date(a.lastContact)) / 864e5);
-  if (days <= 30) return { fill: '#D4EDDA', stroke: '#1A6B4A' };
-  if (days <= 60) return { fill: '#FFF3CD', stroke: '#B8860B' };
-  return { fill: '#FCEAEA', stroke: '#A32D2D' };
+  if (a.interest === 'interested')    return { fill: '#D4EDDA', stroke: '#1A6B4A' };  // green
+  if (a.interest === 'warm')          return { fill: '#FFF3CD', stroke: '#B8860B' };  // yellow
+  if (a.interest === 'not-interested')return { fill: '#FCEAEA', stroke: '#A32D2D' };  // red
+  return { fill: '#E0E0DC', stroke: '#9A9A94' };                                      // grey - not set
 }
 function pinFill(a)   { return a.status === 'prospect' ? prospectColor(a).fill   : a.type === 'ON' ? '#185FA5' : '#B5640A'; }
 function pinStroke(a) { return a.status === 'prospect' ? prospectColor(a).stroke : a.type === 'ON' ? '#0C447C' : '#7A3F00'; }
@@ -1010,6 +1016,12 @@ async function openPanel(id) {
   const bdg=document.getElementById('p-bdg'); bdg.innerHTML='';
   const b1=document.createElement('span'); b1.className='bdg b'+a.type.toLowerCase(); b1.textContent=a.type==='ON'?'On-Premise':'Off-Premise'; bdg.appendChild(b1);
   const b2=document.createElement('span'); b2.className='bdg '+(a.status==='current'?'bcur':'bpro'); b2.textContent=a.status==='current'?'Current':'Prospect'; bdg.appendChild(b2);
+  if(a.status==='prospect'&&a.interest){
+    const b3=document.createElement('span'); b3.className='bdg';
+    const iMap={'interested':{bg:'#D4EDDA',col:'#1A6B4A',txt:'Interested'},'warm':{bg:'#FFF3CD',col:'#B8860B',txt:'Warm'},'not-interested':{bg:'#FCEAEA',col:'#A32D2D',txt:'Not Interested'}};
+    const ic=iMap[a.interest];
+    if(ic){b3.style.cssText='background:'+ic.bg+';color:'+ic.col;b3.textContent=ic.txt;bdg.appendChild(b3);}
+  }
   const setV=(id,v,href)=>{const el=document.getElementById(id);if(v&&v.trim()){if(href){el.innerHTML='<a href="'+href+esc(v)+'">'+esc(v)+'</a>';}else{el.textContent=v;el.classList.remove('emp');}}else{el.textContent='Not set';el.classList.add('emp');}};
   setV('p-ct',a.contact); setV('p-ph',a.phone,'tel:'); setV('p-em',a.email,'mailto:'); setV('p-rp',a.distributorRep); setV('p-lc',a.lastContact);
   document.getElementById('p-st').textContent = a.status==='current'?'Current':'Prospect';
@@ -1078,6 +1090,8 @@ function openEdit(id){
   document.getElementById('f-fud').value=a.followUpDate||''; document.getElementById('f-fun').value=a.followUpNotes||'';
   document.getElementById('f-nt').value=a.notes||'';
   setSt(a.status);
+  editInterest = a.interest || '';
+  setInterest(editInterest);
   const eov=document.getElementById('eov'); eov.style.display='flex'; setTimeout(()=>eov.classList.add('on'),10);
 }
 function openAdd(){
@@ -1091,10 +1105,30 @@ function setSt(s){
   editSt=s;
   document.getElementById('opt-cur').className='sopt'+(s==='current'?' sc':'');
   document.getElementById('opt-pro').className='sopt'+(s==='prospect'?' sp':'');
+  document.getElementById('interest-field').style.display=s==='prospect'?'block':'none';
+}
+function setInterest(level){
+  editInterest=level;
+  const map={
+    'interested':{bg:'#D4EDDA',col:'#1A6B4A',bdr:'#1A6B4A'},
+    'warm':{bg:'#FFF3CD',col:'#B8860B',bdr:'#B8860B'},
+    'not-interested':{bg:'#FCEAEA',col:'#A32D2D',bdr:'#A32D2D'}
+  };
+  ['interested','warm','not-interested'].forEach(k=>{
+    const el=document.getElementById('int-'+k);
+    if(!el) return;
+    if(level===k){
+      const m=map[k];
+      el.style.background=m.bg; el.style.color=m.col; el.style.borderColor=m.bdr;
+      el.style.borderWidth='1px'; el.style.borderStyle='solid';
+    } else {
+      el.style.background=''; el.style.color=''; el.style.borderColor='';
+    }
+  });
 }
 async function saveEdit(){
   const nm=document.getElementById('f-nm').value.trim(); if(!nm){alert('Account name required.');return;}
-  const d={name:nm,address:document.getElementById('f-ad').value.trim(),type:document.getElementById('f-ty').value,status:editSt,
+  const d={name:nm,address:document.getElementById('f-ad').value.trim(),type:document.getElementById('f-ty').value,status:editSt,interest:editSt==='prospect'?editInterest:'',
     contact:document.getElementById('f-ct').value.trim(),phone:document.getElementById('f-ph').value.trim(),
     email:document.getElementById('f-em').value.trim(),distributorRep:document.getElementById('f-rp').value.trim(),
     lastContact:document.getElementById('f-lc').value,
@@ -1580,6 +1614,9 @@ document.getElementById('btn-ecls').addEventListener('click',closeEdit);
 document.getElementById('btn-save').addEventListener('click',saveEdit);
 document.getElementById('opt-cur').addEventListener('click',()=>setSt('current'));
 document.getElementById('opt-pro').addEventListener('click',()=>setSt('prospect'));
+document.getElementById('int-interested').addEventListener('click',()=>setInterest('interested'));
+document.getElementById('int-warm').addEventListener('click',()=>setInterest('warm'));
+document.getElementById('int-not').addEventListener('click',()=>setInterest('not-interested'));
 document.getElementById('btn-icls').addEventListener('click',()=>{const iov=document.getElementById('iov');iov.classList.remove('on');setTimeout(()=>iov.style.display='none',200);});
 document.getElementById('btn-idone').addEventListener('click',()=>{const iov=document.getElementById('iov');iov.classList.remove('on');setTimeout(()=>iov.style.display='none',200);});
 document.getElementById('itab-update').addEventListener('click',()=>setImportTab('update'));
