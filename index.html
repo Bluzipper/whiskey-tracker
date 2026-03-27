@@ -414,16 +414,16 @@ header{height:var(--hh);background:#1A1108;display:flex;align-items:center;gap:8
     </div>
     <div class="fsec"><div class="flbl">Annual volume (cases/yr)</div>
       <div class="vg3">
-        <div class="fld"><label>Bourbon</label><input id="f-b" type="number" min="0"></div>
-        <div class="fld"><label>Rye</label><input id="f-r" type="number" min="0"></div>
-        <div class="fld"><label>Old Fashioned</label><input id="f-o" type="number" min="0"></div>
+        <div class="fld"><label>Bourbon</label><input id="f-b" type="number" min="0" step="0.01"></div>
+        <div class="fld"><label>Rye</label><input id="f-r" type="number" min="0" step="0.01"></div>
+        <div class="fld"><label>Old Fashioned</label><input id="f-o" type="number" min="0" step="0.01"></div>
       </div>
     </div>
     <div class="fsec"><div class="flbl">Last 90-day volume</div>
       <div class="vg3">
-        <div class="fld"><label>Bourbon</label><input id="f-q90b" type="number" min="0"></div>
-        <div class="fld"><label>Rye</label><input id="f-q90r" type="number" min="0"></div>
-        <div class="fld"><label>Old Fashioned</label><input id="f-q90o" type="number" min="0"></div>
+        <div class="fld"><label>Bourbon</label><input id="f-q90b" type="number" min="0" step="0.01"></div>
+        <div class="fld"><label>Rye</label><input id="f-q90r" type="number" min="0" step="0.01"></div>
+        <div class="fld"><label>Old Fashioned</label><input id="f-q90o" type="number" min="0" step="0.01"></div>
       </div>
     </div>
     <div class="fsec"><div class="flbl">Follow-up</div>
@@ -1132,8 +1132,8 @@ async function saveEdit(){
     contact:document.getElementById('f-ct').value.trim(),phone:document.getElementById('f-ph').value.trim(),
     email:document.getElementById('f-em').value.trim(),distributorRep:document.getElementById('f-rp').value.trim(),
     lastContact:document.getElementById('f-lc').value,
-    bourbon:parseInt(document.getElementById('f-b').value)||0,rye:parseInt(document.getElementById('f-r').value)||0,oldFashioned:parseInt(document.getElementById('f-o').value)||0,
-    q90_bourbon:parseInt(document.getElementById('f-q90b').value)||0,q90_rye:parseInt(document.getElementById('f-q90r').value)||0,q90_of:parseInt(document.getElementById('f-q90o').value)||0,
+    bourbon:parseFloat(document.getElementById('f-b').value)||0,rye:parseFloat(document.getElementById('f-r').value)||0,oldFashioned:parseFloat(document.getElementById('f-o').value)||0,
+    q90_bourbon:parseFloat(document.getElementById('f-q90b').value)||0,q90_rye:parseFloat(document.getElementById('f-q90r').value)||0,q90_of:parseFloat(document.getElementById('f-q90o').value)||0,
     followUpDate:document.getElementById('f-fud').value,followUpNotes:document.getElementById('f-fun').value.trim(),
     notes:document.getElementById('f-nt').value.trim()};
   const btn=document.getElementById('btn-save'); btn.disabled=true;
@@ -1261,13 +1261,6 @@ function renderDash(){
   geoFixBtn.addEventListener('click', () => window.forceReGeocode && window.forceReGeocode());
   el.appendChild(geoFixBtn);
 
-  // Bulk convert accounts missing volume data to prospect status
-  const prospectBtn = document.createElement('button');
-  prospectBtn.style.cssText = 'display:block;width:100%;padding:11px;background:#1A1108;color:#E8A84A;font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;border:none;border-radius:var(--r);cursor:pointer;margin-bottom:12px;text-align:center';
-  prospectBtn.textContent = '\u2605 Convert zero-volume accounts to Prospects';
-  prospectBtn.addEventListener('click', () => window.bulkConvertToProspect && window.bulkConvertToProspect());
-  el.appendChild(prospectBtn);
-
   function dtitle(t){const d=document.createElement('div');d.className='dtitle';d.textContent=t;return d;}
   function kgrid(...cards){const g=document.createElement('div');g.className='kgrid';cards.forEach(c=>g.appendChild(c));return g;}
   function kcard(lbl,val,sub,cls){const c=document.createElement('div');c.className='kcard'+(cls?' '+cls:'');c.innerHTML='<div class="klbl">'+lbl+'</div><div class="kval">'+val+'</div><div class="ksub">'+sub+'</div>';return c;}
@@ -1362,7 +1355,7 @@ async function handleNewAccountsImport(rows) {
       name,
       address: ai >= 0 ? row[ai].trim() : '',
       type: ti >= 0 ? row[ti].toUpperCase().trim() : 'OFF',
-      status: 'prospect',
+      status: 'current',
       contact: '', phone: '', email: '', distributorRep: '',
       lastContact: '', notes: '', followUpDate: '', followUpNotes: '',
       bourbon: bi >= 0 ? parseFloat(row[bi]) || 0 : 0,
@@ -1571,43 +1564,6 @@ function showMyLocation() {
     showToast('⚠ ' + (msgs[err.code] || 'Could not get location'));
   }, { enableHighAccuracy: true, timeout: 10000 });
 }
-
-// ── BULK CONVERT TO PROSPECT ──
-window.bulkConvertToProspect = async function() {
-  // Find all 'current' accounts with zero volume across all products
-  const toConvert = A.filter(a =>
-    a.status === 'current' &&
-    (a.bourbon || 0) === 0 &&
-    (a.rye || 0) === 0 &&
-    (a.oldFashioned || 0) === 0 &&
-    (a.q90_bourbon || 0) === 0 &&
-    (a.q90_rye || 0) === 0 &&
-    (a.q90_of || 0) === 0
-  );
-  if (!toConvert.length) {
-    showToast('No zero-volume current accounts found');
-    return;
-  }
-  if (!confirm(`Convert ${toConvert.length} zero-volume current accounts to Prospect status?`)) return;
-  showToast(`Converting ${toConvert.length} accounts…`);
-  let done = 0;
-  const batchSize = 20;
-  for (let i = 0; i < toConvert.length; i += batchSize) {
-    const chunk = toConvert.slice(i, i + batchSize);
-    const batch = writeBatch(db);
-    chunk.forEach(a => {
-      if (a._docId) {
-        batch.set(doc(db, 'accounts', a._docId), { status: 'prospect' }, { merge: true });
-        a.status = 'prospect';
-      }
-      done++;
-    });
-    await batch.commit();
-  }
-  showToast(`✓ Converted ${done} accounts to Prospect`);
-  renderList();
-  if (gMap) renderMarkers();
-};
 
 // ── EXPOSE GLOBALS NEEDED BY MAPS / EXTERNAL CALLBACKS ──
 window.forceReGeocode = async function() {
