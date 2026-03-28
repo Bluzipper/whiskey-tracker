@@ -414,16 +414,16 @@ header{height:var(--hh);background:#1A1108;display:flex;align-items:center;gap:8
     </div>
     <div class="fsec"><div class="flbl">Annual volume (cases/yr)</div>
       <div class="vg3">
-        <div class="fld"><label>Bourbon</label><input id="f-b" type="number" min="0" step="0.01"></div>
-        <div class="fld"><label>Rye</label><input id="f-r" type="number" min="0" step="0.01"></div>
-        <div class="fld"><label>Old Fashioned</label><input id="f-o" type="number" min="0" step="0.01"></div>
+        <div class="fld"><label>Bourbon</label><input id="f-b" type="number" min="0"></div>
+        <div class="fld"><label>Rye</label><input id="f-r" type="number" min="0"></div>
+        <div class="fld"><label>Old Fashioned</label><input id="f-o" type="number" min="0"></div>
       </div>
     </div>
     <div class="fsec"><div class="flbl">Last 90-day volume</div>
       <div class="vg3">
-        <div class="fld"><label>Bourbon</label><input id="f-q90b" type="number" min="0" step="0.01"></div>
-        <div class="fld"><label>Rye</label><input id="f-q90r" type="number" min="0" step="0.01"></div>
-        <div class="fld"><label>Old Fashioned</label><input id="f-q90o" type="number" min="0" step="0.01"></div>
+        <div class="fld"><label>Bourbon</label><input id="f-q90b" type="number" min="0"></div>
+        <div class="fld"><label>Rye</label><input id="f-q90r" type="number" min="0"></div>
+        <div class="fld"><label>Old Fashioned</label><input id="f-q90o" type="number" min="0"></div>
       </div>
     </div>
     <div class="fsec"><div class="flbl">Follow-up</div>
@@ -1132,8 +1132,8 @@ async function saveEdit(){
     contact:document.getElementById('f-ct').value.trim(),phone:document.getElementById('f-ph').value.trim(),
     email:document.getElementById('f-em').value.trim(),distributorRep:document.getElementById('f-rp').value.trim(),
     lastContact:document.getElementById('f-lc').value,
-    bourbon:parseFloat(document.getElementById('f-b').value)||0,rye:parseFloat(document.getElementById('f-r').value)||0,oldFashioned:parseFloat(document.getElementById('f-o').value)||0,
-    q90_bourbon:parseFloat(document.getElementById('f-q90b').value)||0,q90_rye:parseFloat(document.getElementById('f-q90r').value)||0,q90_of:parseFloat(document.getElementById('f-q90o').value)||0,
+    bourbon:parseInt(document.getElementById('f-b').value)||0,rye:parseInt(document.getElementById('f-r').value)||0,oldFashioned:parseInt(document.getElementById('f-o').value)||0,
+    q90_bourbon:parseInt(document.getElementById('f-q90b').value)||0,q90_rye:parseInt(document.getElementById('f-q90r').value)||0,q90_of:parseInt(document.getElementById('f-q90o').value)||0,
     followUpDate:document.getElementById('f-fud').value,followUpNotes:document.getElementById('f-fun').value.trim(),
     notes:document.getElementById('f-nt').value.trim()};
   const btn=document.getElementById('btn-save'); btn.disabled=true;
@@ -1409,13 +1409,18 @@ async function handleImport(file){
     let updated=0,skipped=0;
     const promises=rows.slice(1).map(async row=>{
       if(!row[ni])return;
-      const acct=A.find(a=>a.name.toLowerCase().trim()===row[ni].toLowerCase().trim());
+      // Strip asterisks from imported name for matching
+      const importName=row[ni].replace(/\*/g,'').toLowerCase().trim();
+      const acct=A.find(a=>a.name.toLowerCase().trim()===importName);
       if(!acct){skipped++;return;}
-      const sv=(idx,key)=>{if(idx>=0&&row[idx]!==undefined&&row[idx]!==''){const v=parseInt(row[idx]);if(!isNaN(v))acct[key]=v;}};
+      const sv=(idx,key)=>{if(idx>=0&&row[idx]!==undefined&&row[idx]!==''){const v=parseFloat(row[idx]);if(!isNaN(v))acct[key]=v;}};
       sv(bi,'bourbon');sv(ri,'rye');sv(oi,'oldFashioned');
       sv(q90bi,'q90_bourbon');sv(q90ri,'q90_rye');sv(q90oi,'q90_of');
+      // If account has volume and is a prospect, convert to current
+      const hasVol=(acct.bourbon||0)+(acct.rye||0)+(acct.oldFashioned||0)>0;
+      if(hasVol && acct.status==='prospect') acct.status='current';
       await saveAccount(acct);
-      await logChange(acct.id,'imported','volume update');
+      await logChange(acct.id,'imported','volume update'+(hasVol&&acct.status==='current'?' + converted to current':''));
       updated++;
     });
     await Promise.all(promises);
