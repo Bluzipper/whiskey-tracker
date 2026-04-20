@@ -1141,6 +1141,7 @@ async function saveEdit(){
   if(editId){
     const i=A.findIndex(x=>x.id===editId);
     const addrChanged=A[i].address!==d.address;
+    // Promote prospect→current if annual volume entered; never demote current→prospect
     if(d.status==='prospect'&&(d.bourbon||0)+(d.rye||0)+(d.oldFashioned||0)>0) d.status='current';
     const updated={...A[i],...d};
     if(addrChanged&&d.address){
@@ -1267,6 +1268,12 @@ function renderDash(){
   convBtn.textContent = '\u2605 Convert zero-volume accounts to Prospects';
   convBtn.addEventListener('click', () => window.bulkConvertToProspect && window.bulkConvertToProspect());
   el.appendChild(convBtn);
+
+  const restoreBtn = document.createElement('button');
+  restoreBtn.style.cssText = 'display:block;width:100%;padding:11px;background:#1A4A1A;color:#7EE87E;font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;border:none;border-radius:var(--r);cursor:pointer;margin-bottom:12px;text-align:center';
+  restoreBtn.textContent = '\u21ba Restore accounts with annual volume to Current';
+  restoreBtn.addEventListener('click', () => window.restoreCurrentAccounts && window.restoreCurrentAccounts());
+  el.appendChild(restoreBtn);
 
   function dtitle(t){const d=document.createElement('div');d.className='dtitle';d.textContent=t;return d;}
   function kgrid(...cards){const g=document.createElement('div');g.className='kgrid';cards.forEach(c=>g.appendChild(c));return g;}
@@ -1422,8 +1429,9 @@ async function handleImport(file){
       const sv=(idx,key)=>{if(idx>=0&&row[idx]!==undefined&&row[idx]!==''){const v=parseFloat(row[idx]);if(!isNaN(v))acct[key]=v;}};
       sv(bi,'bourbon');sv(ri,'rye');sv(oi,'oldFashioned');
       sv(q90bi,'q90_bourbon');sv(q90ri,'q90_rye');sv(q90oi,'q90_of');
-      const hasVol=(acct.bourbon||0)+(acct.rye||0)+(acct.oldFashioned||0)>0;
-      if(hasVol && acct.status==='prospect') acct.status='current';
+      // Only promote prospect→current if annual volume present; never demote
+      const annualVol=(acct.bourbon||0)+(acct.rye||0)+(acct.oldFashioned||0);
+      if(annualVol>0 && acct.status==='prospect') acct.status='current';
       await saveAccount(acct);
       await logChange(acct.id,'imported','volume update');
       updated++;
@@ -1597,15 +1605,36 @@ async function deleteAccount(id) {
   } catch(e) { showToast('⚠ Delete failed: ' + e.message); }
 }
 
-// ── BULK CONVERT TO PROSPECT ──
+// ── RESTORE CURRENT ACCOUNTS (any prospect with annual volume → current) ──
+window.restoreCurrentAccounts = async function() {
+  const toRestore = A.filter(a =>
+    a.status === 'prospect' &&
+    (a.bourbon||0)+(a.rye||0)+(a.oldFashioned||0) > 0
+  );
+  if (!toRestore.length) { showToast('No accounts need restoring'); return; }
+  if (!confirm('Restore '+toRestore.length+' accounts with annual volume back to Current customer status?')) return;
+  showToast('Restoring '+toRestore.length+' accounts…');
+  for (let i = 0; i < toRestore.length; i += 20) {
+    const batch = writeBatch(db);
+    toRestore.slice(i, i+20).forEach(a => {
+      if (a._docId) { batch.set(doc(db,'accounts',a._docId),{status:'current'},{merge:true}); a.status='current'; }
+    });
+    await batch.commit();
+  }
+  showToast('✓ Restored '+toRestore.length+' accounts to Current');
+  renderList(); if (gMap) renderMarkers();
+};
+
+// ── BULK CONVERT TO PROSPECT (annual volume = 0 only) ──
 window.bulkConvertToProspect = async function() {
   const toConvert = A.filter(a =>
     a.status === 'current' &&
-    (a.bourbon||0)===0 && (a.rye||0)===0 && (a.oldFashioned||0)===0 &&
-    (a.q90_bourbon||0)===0 && (a.q90_rye||0)===0 && (a.q90_of||0)===0
+    (a.bourbon||0)===0 && (a.rye||0)===0 && (a.oldFashioned||0)===0
   );
-  if (!toConvert.length) { showToast('No zero-volume current accounts found'); return; }
-  if (!confirm('Convert '+toConvert.length+' zero-volume current accounts to Prospect?')) return;
+  if (!toConvert.length) { showToast('No zero-annual-volume current accounts found'); return; }
+  if (!confirm('Convert '+toConvert.length+' accounts with zero annual volume to Prospect?
+
+Note: accounts with Q90 volume but no annual volume will also be included.')) return;
   showToast('Converting '+toConvert.length+' accounts…');
   for (let i = 0; i < toConvert.length; i += 20) {
     const batch = writeBatch(db);
